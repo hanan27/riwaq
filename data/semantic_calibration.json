@@ -1,0 +1,14 @@
+[
+ {"left":"What does a transcript cost?","right":"What does the transcript cost?","same_answer":true},
+ {"left":"What are admissions documents?","right":"What are the admissions documents?","same_answer":true},
+ {"left":"When does enrolment open?","right":"When does enrolment open please?","same_answer":true},
+ {"left":"Is advising free?","right":"Is advising free please?","same_answer":true},
+ {"left":"كم رسوم السجل؟","right":"كم رسوم السجل الأكاديمي؟","same_answer":true},
+ {"left":"ما متطلبات القبول؟","right":"ما هي متطلبات القبول؟","same_answer":true},
+ {"left":"متى يبدأ التسجيل؟","right":"متى يبدأ التسجيل من فضلك؟","same_answer":true},
+ {"left":"هل المرشد مجاني؟","right":"هل موعد المرشد مجاني؟","same_answer":true},
+ {"left":"What does a transcript cost?","right":"What does an advisor cost?","same_answer":false},
+ {"left":"When does enrolment open?","right":"When does admissions open?","same_answer":false},
+ {"left":"كم رسوم السجل؟","right":"كم رسوم القبول؟","same_answer":false},
+ {"left":"هل المرشد مجاني؟","right":"هل السجل مجاني؟","same_answer":false}
+]

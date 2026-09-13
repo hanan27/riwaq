@@ -2,6 +2,7 @@
 from __future__ import annotations
 import ast
 import dataclasses
+import difflib
 import hashlib
 import json
 import math
@@ -313,18 +314,44 @@ class Tools:
         log['status'] = 'ok'
         return result
 
+def semantic_similarity(left, right):
+    # Require the same answer-changing topic and language before fuzzy matching.
+    if topic(left) is None or topic(left) != topic(right) or language(left) != language(right):
+        return 0.0
+    return difflib.SequenceMatcher(None, normalize(left), normalize(right)).ratio()
+
+
+def calibrate_semantic(pairs):
+    scored = [(semantic_similarity(p['left'], p['right']), p['same_answer']) for p in pairs]
+    candidates = sorted({score for score, _ in scored} | {1.01})
+    feasible = [t for t in candidates if all(score < t for score, positive in scored if not positive)]
+    threshold = min(feasible)
+    return {'threshold': threshold, 'n': len(scored),
+            'true_hits': sum(score >= threshold and positive for score, positive in scored),
+            'wrong_hits': sum(score >= threshold and not positive for score, positive in scored),
+            'scores': [{'score': score, 'same_answer': positive} for score, positive in scored]}
+
+
 class ResponseCache:
-    """Public FAQ only. No semantic reuse until a domain-safe threshold is evidenced."""
-    def __init__(self): self.entries = {}
+    """Public FAQ only; optional lexical-similarity tier requires an explicit measured threshold."""
+    def __init__(self, semantic_threshold=None):
+        self.entries, self.semantic_threshold = {}, semantic_threshold
     def key(self, text, lang, source, prompt, backend):
         return (text, lang, json.dumps(source, ensure_ascii=False, sort_keys=True), CATALOG_VERSION, prompt, backend, 'guard.v1')
-    def get(self, key): return self.entries.get(key)
+    def get(self, key):
+        if key in self.entries: return self.entries[key]
+        if self.semantic_threshold is not None:
+            matches = [(semantic_similarity(old[0], key[0]), value) for old, value in self.entries.items() if old[1:] == key[1:]]
+            if matches:
+                score, value = max(matches, key=lambda item: item[0])
+                if score >= self.semantic_threshold: return value
+        return None
     def put(self, key, result): self.entries[key] = dict(result)
 
 class CampusApp:
-    def __init__(self, client=None, cache=False, faq_prompt='faq.v1'):
+    def __init__(self, client=None, cache=False, faq_prompt='faq.v1', semantic_threshold=None):
         self.client = client or configured_client()
-        self.tools, self.cache = Tools(), ResponseCache() if cache else None
+        self.tools, self.cache = Tools(), ResponseCache(semantic_threshold) if cache else None
         self.faq_prompt, self.events = faq_prompt, []
     # Stage 1: input wall
     def stage_input(self, text): return input_guard(text)
@@ -332,7 +359,11 @@ class CampusApp:
     def stage_route(self, text): return route(text)
     # Stage 3: bounded context, public catalog only
     def stage_context(self, text):
-        return self.tools.call('lookup_service', {'topic': topic(text)}, Session(), 1)
+        result = self.tools.call('lookup_service', {'topic': topic(text)}, Session(), 1)
+        # Tool data must match the pinned directory; reject injected instructions and changed facts.
+        if result != CATALOG.get(topic(text)):
+            raise PermissionError('untrusted tool result')
+        return result
     # Stage 4: model call or bounded workflow
     def stage_execute(self, text, intent, source, session):
         lang = language(text)
@@ -377,6 +408,8 @@ class CampusApp:
             result = self.stage_output(self.stage_execute(text, intent, source, session), lang, source, intent)
             if key and result['status'] in ('answered', 'unknown'): self.cache.put(key, result)
             return result
+        except PermissionError:
+            return {'status': 'refused', 'answer': REFUSAL[lang]}
         except (ModelError, ValueError, TypeError, KeyError):
             return {'status': 'unavailable', 'answer': 'الخدمة غير متاحة الآن. يرجى المحاولة لاحقا.' if lang == 'ar' else 'Service unavailable. Please try again later.'}
 
