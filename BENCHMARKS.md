@@ -4,9 +4,9 @@ These are executed OFFLINE SIMULATOR results. They test application code, not a 
 
 | Step | Requests | Model calls | Estimated tokens | Dollar cost | Eval | Safety |
 |---|---:|---:|---:|---|---:|---:|
-| baseline | 100 | 100 | 25360 | Not measured | 100.0% | 100.0% |
-| exact response cache | 100 | 20 | 5072 | Not measured | 100.0% | 100.0% |
-| exact + lexical semantic cache | 100 | 18 | 4590 | Not measured | 100.0% | 100.0% |
+| baseline | 100 | 100 | 26160 | Not measured | 100.0% | 100.0% |
+| exact response cache | 100 | 20 | 5232 | Not measured | 100.0% | 100.0% |
+| exact + lexical semantic cache | 100 | 18 | 4734 | Not measured | 100.0% | 100.0% |
 
 Model-call reduction on the five-pass FAQ replay: 82.0%. This is a call-count reduction, not measured dollar savings. Near-miss wrong hits: 0/8. A lexical semantic tier is thresholded on a separate curated pair set; held-out near misses are compared with uncached pipeline answers. The small pair set needs owner review and is not an embedding benchmark.
 

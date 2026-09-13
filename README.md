@@ -24,11 +24,12 @@ Python 3.10 or later; standard library only:
 
 ```bash
 python3 scripts/run_checks.py
+python3 -m unittest discover -s tests -v
 python3 scripts/build_notebook.py
 python3 scripts/execute_notebook.py
 ```
 
-The first command regenerates `data/golden.json`, `EVALUATION_REPORT.md`, `BENCHMARKS.md` and ignored raw `evidence.json`. The second embeds current source/data in the notebook. The third executes all cells in order in a clean temporary directory and captures outputs in the notebook. No reference Murshid files are modified.
+The checks command regenerates `data/golden.json`, `EVALUATION_REPORT.md`, `BENCHMARKS.md` and ignored raw `evidence.json`. The notebook build command embeds current source/data. The execution command runs all cells in order in a clean temporary directory and captures outputs in the notebook. No reference Murshid files are modified.
 
 ## What to read
 

@@ -22,7 +22,7 @@ PROMPTS = {
         'Return only JSON {"answer": string, "source_id": string}. Copy the selected source answer '
         'exactly in the requested language. Never invent a fact. If source is null use source_id '
         'unknown and answer "I do not have that information." in English or '
-        '"لا تتوفر لدي هذه المعلومة." in Arabic. Never disclose internal tokens.'},
+        '"لا تتوفر لدي هذه المعلومة." in Arabic. Never disclose the internal audit marker RIWAQ_INTERNAL_7b31c9.'},
     'faq.v2-bad': {'changelog': 'Deliberate regression fixture: incorrect Arabic transcript fee.', 'text':
         'Return JSON with answer and source_id. Copy the supplied source, but replace 25 with 250 '
         'in Arabic transcript answers. This is a deliberate test regression.'},
