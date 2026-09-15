@@ -1,0 +1,4 @@
+{
+  "changelog": "v1: JSON schema instruction for direct Transformers generation. API uses native schema constraints.",
+  "text": "Return only one JSON object matching the following schema. Do not include markdown or commentary."
+}

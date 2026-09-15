@@ -1,0 +1,406 @@
+{
+  "version": "v1",
+  "provenance": "Synthetic development fixtures with source-derived labels, prepared with AI assistance; independent human review pending.",
+  "rows": [
+    {
+      "id": "R001-supported",
+      "reference": "رسوم السجل الأكاديمي الرسمي 25 ريال ومدة إصداره يومان عمل.",
+      "answer": "رسوم السجل الأكاديمي الرسمي 25 ريال ومدة إصداره يومان عمل.",
+      "supported": true,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R001-unsupported",
+      "reference": "رسوم السجل الأكاديمي الرسمي 25 ريال ومدة إصداره يومان عمل.",
+      "answer": "رسوم السجل الأكاديمي الرسمي 25 ريال ومدة إصداره يومان عمل. رسوم إضافية: 700 ريال.",
+      "supported": false,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R002-supported",
+      "reference": "رسوم السجل الأكاديمي الرسمي 25 ريال ومدة إصداره يومان عمل.",
+      "answer": "رسوم السجل الأكاديمي الرسمي 25 ريال ومدة إصداره يومان عمل.",
+      "supported": true,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R002-unsupported",
+      "reference": "رسوم السجل الأكاديمي الرسمي 25 ريال ومدة إصداره يومان عمل.",
+      "answer": "رسوم السجل الأكاديمي الرسمي 25 ريال ومدة إصداره يومان عمل. رسوم إضافية: 700 ريال.",
+      "supported": false,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R003-supported",
+      "reference": "يتطلب القبول شهادة الثانوية ووثيقة الهوية.",
+      "answer": "يتطلب القبول شهادة الثانوية ووثيقة الهوية.",
+      "supported": true,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R003-unsupported",
+      "reference": "يتطلب القبول شهادة الثانوية ووثيقة الهوية.",
+      "answer": "يتطلب القبول شهادة الثانوية ووثيقة الهوية. رسوم إضافية: 700 ريال.",
+      "supported": false,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R004-supported",
+      "reference": "يتطلب القبول شهادة الثانوية ووثيقة الهوية.",
+      "answer": "يتطلب القبول شهادة الثانوية ووثيقة الهوية.",
+      "supported": true,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R004-unsupported",
+      "reference": "يتطلب القبول شهادة الثانوية ووثيقة الهوية.",
+      "answer": "يتطلب القبول شهادة الثانوية ووثيقة الهوية. رسوم إضافية: 700 ريال.",
+      "supported": false,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R005-supported",
+      "reference": "يفتح تسجيل المقررات في 1 سبتمبر ويغلق في 10 سبتمبر.",
+      "answer": "يفتح تسجيل المقررات في 1 سبتمبر ويغلق في 10 سبتمبر.",
+      "supported": true,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R005-unsupported",
+      "reference": "يفتح تسجيل المقررات في 1 سبتمبر ويغلق في 10 سبتمبر.",
+      "answer": "يفتح تسجيل المقررات في 1 سبتمبر ويغلق في 10 سبتمبر. رسوم إضافية: 700 ريال.",
+      "supported": false,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R006-supported",
+      "reference": "يفتح تسجيل المقررات في 1 سبتمبر ويغلق في 10 سبتمبر.",
+      "answer": "يفتح تسجيل المقررات في 1 سبتمبر ويغلق في 10 سبتمبر.",
+      "supported": true,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R006-unsupported",
+      "reference": "يفتح تسجيل المقررات في 1 سبتمبر ويغلق في 10 سبتمبر.",
+      "answer": "يفتح تسجيل المقررات في 1 سبتمبر ويغلق في 10 سبتمبر. رسوم إضافية: 700 ريال.",
+      "supported": false,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R007-supported",
+      "reference": "مواعيد المرشد الأكاديمي مجانية. المواعيد المتاحة: الاثنين 09:00 والثلاثاء 11:00.",
+      "answer": "مواعيد المرشد الأكاديمي مجانية. المواعيد المتاحة: الاثنين 09:00 والثلاثاء 11:00.",
+      "supported": true,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R007-unsupported",
+      "reference": "مواعيد المرشد الأكاديمي مجانية. المواعيد المتاحة: الاثنين 09:00 والثلاثاء 11:00.",
+      "answer": "مواعيد المرشد الأكاديمي مجانية. المواعيد المتاحة: الاثنين 09:00 والثلاثاء 11:00. رسوم إضافية: 700 ريال.",
+      "supported": false,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R008-supported",
+      "reference": "مواعيد المرشد الأكاديمي مجانية. المواعيد المتاحة: الاثنين 09:00 والثلاثاء 11:00.",
+      "answer": "مواعيد المرشد الأكاديمي مجانية. المواعيد المتاحة: الاثنين 09:00 والثلاثاء 11:00.",
+      "supported": true,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R008-unsupported",
+      "reference": "مواعيد المرشد الأكاديمي مجانية. المواعيد المتاحة: الاثنين 09:00 والثلاثاء 11:00.",
+      "answer": "مواعيد المرشد الأكاديمي مجانية. المواعيد المتاحة: الاثنين 09:00 والثلاثاء 11:00. رسوم إضافية: 700 ريال.",
+      "supported": false,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R009-supported",
+      "reference": "رسوم السجل الأكاديمي الرسمي 25 ريال ومدة إصداره يومان عمل.",
+      "answer": "رسوم السجل الأكاديمي الرسمي 25 ريال ومدة إصداره يومان عمل.",
+      "supported": true,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R009-unsupported",
+      "reference": "رسوم السجل الأكاديمي الرسمي 25 ريال ومدة إصداره يومان عمل.",
+      "answer": "رسوم السجل الأكاديمي الرسمي 25 ريال ومدة إصداره يومان عمل. رسوم إضافية: 700 ريال.",
+      "supported": false,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R010-supported",
+      "reference": "يتطلب القبول شهادة الثانوية ووثيقة الهوية.",
+      "answer": "يتطلب القبول شهادة الثانوية ووثيقة الهوية.",
+      "supported": true,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R010-unsupported",
+      "reference": "يتطلب القبول شهادة الثانوية ووثيقة الهوية.",
+      "answer": "يتطلب القبول شهادة الثانوية ووثيقة الهوية. رسوم إضافية: 700 ريال.",
+      "supported": false,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R011-supported",
+      "reference": "يفتح تسجيل المقررات في 1 سبتمبر ويغلق في 10 سبتمبر.",
+      "answer": "يفتح تسجيل المقررات في 1 سبتمبر ويغلق في 10 سبتمبر.",
+      "supported": true,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R011-unsupported",
+      "reference": "يفتح تسجيل المقررات في 1 سبتمبر ويغلق في 10 سبتمبر.",
+      "answer": "يفتح تسجيل المقررات في 1 سبتمبر ويغلق في 10 سبتمبر. رسوم إضافية: 700 ريال.",
+      "supported": false,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R012-supported",
+      "reference": "مواعيد المرشد الأكاديمي مجانية. المواعيد المتاحة: الاثنين 09:00 والثلاثاء 11:00.",
+      "answer": "مواعيد المرشد الأكاديمي مجانية. المواعيد المتاحة: الاثنين 09:00 والثلاثاء 11:00.",
+      "supported": true,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R012-unsupported",
+      "reference": "مواعيد المرشد الأكاديمي مجانية. المواعيد المتاحة: الاثنين 09:00 والثلاثاء 11:00.",
+      "answer": "مواعيد المرشد الأكاديمي مجانية. المواعيد المتاحة: الاثنين 09:00 والثلاثاء 11:00. رسوم إضافية: 700 ريال.",
+      "supported": false,
+      "language": "ar",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R029-supported",
+      "reference": "An official transcript costs 25 SAR and takes 2 working days.",
+      "answer": "An official transcript costs 25 SAR and takes 2 working days.",
+      "supported": true,
+      "language": "en",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R029-unsupported",
+      "reference": "An official transcript costs 25 SAR and takes 2 working days.",
+      "answer": "An official transcript costs 25 SAR and takes 2 working days. Additional fee: 700 SAR.",
+      "supported": false,
+      "language": "en",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R030-supported",
+      "reference": "An official transcript costs 25 SAR and takes 2 working days.",
+      "answer": "An official transcript costs 25 SAR and takes 2 working days.",
+      "supported": true,
+      "language": "en",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R030-unsupported",
+      "reference": "An official transcript costs 25 SAR and takes 2 working days.",
+      "answer": "An official transcript costs 25 SAR and takes 2 working days. Additional fee: 700 SAR.",
+      "supported": false,
+      "language": "en",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R031-supported",
+      "reference": "Admissions require a school certificate and an identity document.",
+      "answer": "Admissions require a school certificate and an identity document.",
+      "supported": true,
+      "language": "en",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R031-unsupported",
+      "reference": "Admissions require a school certificate and an identity document.",
+      "answer": "Admissions require a school certificate and an identity document. Additional fee: 700 SAR.",
+      "supported": false,
+      "language": "en",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R032-supported",
+      "reference": "Admissions require a school certificate and an identity document.",
+      "answer": "Admissions require a school certificate and an identity document.",
+      "supported": true,
+      "language": "en",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R032-unsupported",
+      "reference": "Admissions require a school certificate and an identity document.",
+      "answer": "Admissions require a school certificate and an identity document. Additional fee: 700 SAR.",
+      "supported": false,
+      "language": "en",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R033-supported",
+      "reference": "Course enrolment opens on 1 September and closes on 10 September.",
+      "answer": "Course enrolment opens on 1 September and closes on 10 September.",
+      "supported": true,
+      "language": "en",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R033-unsupported",
+      "reference": "Course enrolment opens on 1 September and closes on 10 September.",
+      "answer": "Course enrolment opens on 1 September and closes on 10 September. Additional fee: 700 SAR.",
+      "supported": false,
+      "language": "en",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R034-supported",
+      "reference": "Course enrolment opens on 1 September and closes on 10 September.",
+      "answer": "Course enrolment opens on 1 September and closes on 10 September.",
+      "supported": true,
+      "language": "en",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R034-unsupported",
+      "reference": "Course enrolment opens on 1 September and closes on 10 September.",
+      "answer": "Course enrolment opens on 1 September and closes on 10 September. Additional fee: 700 SAR.",
+      "supported": false,
+      "language": "en",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R035-supported",
+      "reference": "Advisor appointments are free. Available slots: Monday 09:00 and Tuesday 11:00.",
+      "answer": "Advisor appointments are free. Available slots: Monday 09:00 and Tuesday 11:00.",
+      "supported": true,
+      "language": "en",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R035-unsupported",
+      "reference": "Advisor appointments are free. Available slots: Monday 09:00 and Tuesday 11:00.",
+      "answer": "Advisor appointments are free. Available slots: Monday 09:00 and Tuesday 11:00. Additional fee: 700 SAR.",
+      "supported": false,
+      "language": "en",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R036-supported",
+      "reference": "Advisor appointments are free. Available slots: Monday 09:00 and Tuesday 11:00.",
+      "answer": "Advisor appointments are free. Available slots: Monday 09:00 and Tuesday 11:00.",
+      "supported": true,
+      "language": "en",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    },
+    {
+      "id": "R036-unsupported",
+      "reference": "Advisor appointments are free. Available slots: Monday 09:00 and Tuesday 11:00.",
+      "answer": "Advisor appointments are free. Available slots: Monday 09:00 and Tuesday 11:00. Additional fee: 700 SAR.",
+      "supported": false,
+      "language": "en",
+      "owner_approved": false,
+      "reviewer": null,
+      "reviewed_at": null
+    }
+  ]
+}

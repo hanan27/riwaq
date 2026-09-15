@@ -1,3 +1,5 @@
 pydantic==2.13.5
 openai==2.54.0
 httpx==0.28.1
+transformers==4.57.6
+torch>=2.6,<3

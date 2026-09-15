@@ -21,3 +21,7 @@ judge_calibration.json
 verified_owner_approval.json
 owner_approval.json
 Riwaq_results.zip
+
+# Local historical copies and operating-system files
+/archive/
+.DS_Store

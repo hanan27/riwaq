@@ -8,7 +8,7 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'src'))
 from riwaq import *
 from evidence import run_golden, regression_gate, privacy_report, calibrate_judge
-from live import meter_summary
+from evaluate import meter_summary
 
 
 def call(name,args,identifier='one'):
@@ -108,7 +108,7 @@ class RubricUpgrade(unittest.TestCase):
         with self.assertRaises(ValidationError): FAQAnswer(answer='   ',source_id='x')
 
     def test_frozen_baseline_blocks_regression_and_changed_membership(self):
-        cases=json.loads((ROOT/'data/golden.json').read_text())
+        cases=json.loads((ROOT/'data/golden.v1.json').read_text())
         before=(ROOT/'data/baseline.v1.json').read_bytes()
         clean=run_golden(cases)
         self.assertTrue(regression_gate(ROOT/'data/baseline.v1.json',clean)['allowed'])

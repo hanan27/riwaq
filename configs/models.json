@@ -3,10 +3,48 @@
     "url": "https://offline.invalid/v1",
     "model": "riwaq-rule-simulator"
   },
-  "commercial": {
-    "configuration": "RIWAQ_COMMERCIAL_* environment variables"
-  },
   "open_weight": {
-    "configuration": "RIWAQ_OPEN_WEIGHT_* environment variables"
+    "model": "Qwen/Qwen2.5-1.5B-Instruct",
+    "revision": "main",
+    "context_limit": 4096
+  },
+  "hardware_hourly_usd": 1.0,
+  "hosted": {
+    "model": "Qwen/Qwen3-235B-A22B-Instruct-2507:deepinfra",
+    "url": "https://router.huggingface.co/v1",
+    "fallback_model": "Qwen/Qwen3-235B-A22B-Instruct-2507:novita",
+    "prices_usd_per_million": [
+      0.09,
+      null,
+      0.55
+    ],
+    "fallback_prices_usd_per_million": [
+      0.09,
+      null,
+      0.58
+    ],
+    "catalog_source": "https://router.huggingface.co/v1/models",
+    "catalog_checked_at": "2026-09-15T10:39:46.485440+00:00",
+    "capabilities": {
+      "deepinfra": {
+        "status": "live",
+        "supports_tools": true,
+        "supports_structured_output": true,
+        "pricing": {
+          "input": 0.09,
+          "output": 0.55
+        }
+      },
+      "novita": {
+        "status": "live",
+        "supports_tools": true,
+        "supports_structured_output": true,
+        "pricing": {
+          "input": 0.09,
+          "output": 0.58
+        }
+      }
+    },
+    "price_note": "Catalog USD per million tokens, before account credits; cached-token price unknown. Not an invoice."
   }
 }

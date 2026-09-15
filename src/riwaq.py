@@ -2,7 +2,6 @@
 from __future__ import annotations
 import ast
 import dataclasses
-import difflib
 import hashlib
 import json
 import math
@@ -294,7 +293,7 @@ def offline_sdk_client():
 
 class MeteredClient:
     """One boundary for retries, fallback, usage and prompt-version logging."""
-    def __init__(self, primary=None, fallback=None, sleep=time.sleep):
+    def __init__(self, primary: LLMClient | None = None, fallback: LLMClient | None = None, sleep=time.sleep):
         self.primary = primary or offline_sdk_client()
         self.fallback, self.sleep, self.logs = fallback, sleep, []
     def complete(self, prompt_id, payload, max_tokens=256, *, messages=None, tools=None, tool_choice='auto'):
@@ -304,16 +303,16 @@ class MeteredClient:
         for backend_index, backend in enumerate(clients):
             for attempt in range(2):
                 start = time.perf_counter()
-                row = {'backend': backend.name, 'prompt': prompt_id, 'attempt': attempt + 1,
+                row = {'backend': backend.name, 'model':getattr(backend,'model_id',getattr(backend,'model',backend.name)), 'prompt': prompt_id, 'attempt': attempt + 1,
                        'fallback': bool(backend_index), 'max_tokens': max_tokens, 'cost_usd':None,
-                       'request_id':len(self.logs)+1, 'prompt_sha256':hashlib.sha256(prompt_text(prompt_id).encode()).hexdigest()}
+                       'request_id':__import__('uuid').uuid4().hex, 'prompt_sha256':hashlib.sha256(prompt_text(prompt_id).encode()).hexdigest()}
                 try:
                     reply = backend.complete(prompt_id, payload, max_tokens, **({'messages':messages,'tools':tools,'tool_choice':tool_choice} if messages is not None or tools is not None else {}))
                     row.update(dataclasses.asdict(reply)); row.pop('text'); row.pop('tool_calls')
                     if not isinstance(reply.text, str) or reply.finish_reason not in ('stop','tool_calls'):
                         raise InvalidResponse('incomplete generation')
                     rates = getattr(backend, 'prices', None)
-                    row['cost_usd'] = ((reply.input_tokens - reply.cached_input_tokens) * rates[0] + reply.cached_input_tokens * rates[1] + reply.output_tokens * rates[2]) / 1e6 if rates and reply.usage_verified else None
+                    row['cost_usd'] = ((reply.input_tokens - reply.cached_input_tokens) * rates[0] + reply.cached_input_tokens * (rates[1] or 0) + reply.output_tokens * rates[2]) / 1e6 if rates and reply.usage_verified and (not reply.cached_input_tokens or rates[1] is not None) else None
                     row['status'] = 'ok'
                     return reply
                 except (RateLimit, Outage, InvalidResponse) as e:
@@ -332,21 +331,9 @@ class MeteredClient:
 
 def configured_client(name='offline'):
     if name == 'offline': return MeteredClient()
-    if name not in ('commercial', 'open_weight'): raise ValueError('unknown backend')
-    prefix = 'RIWAQ_' + name.upper()
-    base, model = os.getenv(prefix + '_URL'), os.getenv(prefix + '_MODEL')
-    if not base or not model: raise ValueError('Set ' + prefix + '_URL and _MODEL')
-    rates = [os.getenv(prefix + suffix) for suffix in ('_INPUT_USD_M', '_CACHED_USD_M', '_OUTPUT_USD_M')]
-    prices = tuple(float(v) for v in rates) if all(v is not None for v in rates) else None
-    fallback_name = os.getenv(prefix + '_FALLBACK')
-    fallback = None
-    if fallback_name:
-        if fallback_name not in ('commercial','open_weight') or fallback_name == name: raise ValueError('invalid fallback alias')
-        fp = 'RIWAQ_' + fallback_name.upper()
-        fallback = HTTPClient(fallback_name, os.environ[fp+'_URL'], os.environ[fp+'_MODEL'], os.getenv(fp+'_KEY',''))
-    timeout = float(os.getenv(prefix + '_TIMEOUT_SECONDS', '15'))
-    if not 1 <= timeout <= 120: raise ValueError('Request timeout must be 1–120 seconds')
-    return MeteredClient(HTTPClient(name, base, model, os.getenv(prefix + '_KEY', ''), prices, request_timeout=timeout), fallback)
+    from backends import make_client
+    return make_client(name)
+
 
 def extract_request(client, text):
     trace = []
@@ -398,44 +385,19 @@ class Tools:
         log['status'] = 'ok'
         return result
 
-def semantic_similarity(left, right):
-    # Require the same answer-changing topic and language before fuzzy matching.
-    if topic(left) is None or topic(left) != topic(right) or language(left) != language(right):
-        return 0.0
-    return difflib.SequenceMatcher(None, normalize(left), normalize(right)).ratio()
-
-
-def calibrate_semantic(pairs):
-    scored = [(semantic_similarity(p['left'], p['right']), p['same_answer']) for p in pairs]
-    candidates = sorted({score for score, _ in scored} | {1.01})
-    feasible = [t for t in candidates if all(score < t for score, positive in scored if not positive)]
-    threshold = min(feasible)
-    return {'threshold': threshold, 'n': len(scored),
-            'true_hits': sum(score >= threshold and positive for score, positive in scored),
-            'wrong_hits': sum(score >= threshold and not positive for score, positive in scored),
-            'scores': [{'score': score, 'same_answer': positive} for score, positive in scored]}
-
-
 class ResponseCache:
-    """Public FAQ only; optional lexical-similarity tier requires an explicit measured threshold."""
-    def __init__(self, semantic_threshold=None):
-        self.entries, self.semantic_threshold = {}, semantic_threshold
+    """Exact response cache for public FAQs only."""
+    def __init__(self):
+        self.entries = {}
     def key(self, text, lang, source, prompt, backend):
         return (text, lang, json.dumps(source, ensure_ascii=False, sort_keys=True), CATALOG_VERSION, prompt, hashlib.sha256(prompt_text(prompt).encode()).hexdigest(), backend, 'guard.v2-pii')
-    def get(self, key):
-        if key in self.entries: return self.entries[key]
-        if self.semantic_threshold is not None:
-            matches = [(semantic_similarity(old[0], key[0]), value) for old, value in self.entries.items() if old[1:] == key[1:]]
-            if matches:
-                score, value = max(matches, key=lambda item: item[0])
-                if score >= self.semantic_threshold: return value
-        return None
+    def get(self, key): return self.entries.get(key)
     def put(self, key, result): self.entries[key] = dict(result)
 
 class CampusApp:
-    def __init__(self, client=None, cache=False, faq_prompt='faq.v1', semantic_threshold=None):
+    def __init__(self, client=None, cache=False, faq_prompt='faq.v1'):
         self.client = client or configured_client()
-        self.tools, self.cache = Tools(), ResponseCache(semantic_threshold) if cache else None
+        self.tools, self.cache = Tools(), ResponseCache() if cache else None
         self.faq_prompt, self.events = faq_prompt, []
     # Stage 1: input wall
     def stage_input(self, text): return input_guard(text)
