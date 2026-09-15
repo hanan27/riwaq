@@ -8,7 +8,7 @@ ROOT=Path(__file__).resolve().parents[1]
 buf=io.BytesIO()
 with zipfile.ZipFile(buf,'w',zipfile.ZIP_DEFLATED) as z:
     files = []
-    for directory in ('src','data','prompts','configs','eval/rubrics','tests'):
+    for directory in ('src','data','prompts','configs','eval/rubrics','tests','templates'):
         files.extend(p for p in (ROOT/directory).rglob('*') if p.is_file() and '__pycache__' not in p.parts)
     files.extend([ROOT/'requirements.txt',ROOT/'requirements.lock'])
     for p in sorted(files):
@@ -22,9 +22,9 @@ md('''# Riwaq | رواق — bilingual campus services
 
 This is an original application for **fictional Namaa University**. It provides exact public answers, authorized advisor bookings and human handoffs in Arabic and English.
 
-**Read this evidence note first:** default execution uses a deterministic **simulator**, not a real language model. Safety checks, schema validation, state changes, fault handling and regression gates execute real application code. Live-model comparisons, human judge calibration and provider dollar/cache claims require additional evidence and are not fabricated here. **Trainee:** Hanan Ahmed Alahmadi. **Cohort dates:** 13–16 September 2026.
+**Read this evidence note first:** the first sections use a clearly labelled deterministic **simulator** to test the application. In Colab, section 12 then automatically starts a **real Hugging Face model** on the selected GPU and runs the frozen evaluation again. Safety checks, schema validation, state changes, fault handling and regression gates execute real application code. Live-model comparisons, human judge calibration and provider dollar/cache claims require additional evidence and are not fabricated here. **Trainee:** Hanan Ahmed Alahmadi. **Cohort dates:** 13–16 September 2026.
 
-**Run:** select **Runtime → Run all**. No API key or manual setup is needed. The first cell automatically installs pinned dependencies if needed. All source and test data are embedded. Optional live cells are disabled by default.
+**Run:** select **Runtime → Run all**. No API key or manual setup is needed. The first cell automatically installs pinned dependencies if needed. All source and test data are embedded. Use a Colab GPU runtime (T4 or better). The real local-model section runs automatically in Colab; it downloads weights and may take several minutes. No paid API or Hugging Face token is required for the public model. A local non-Colab run verifies code only and clearly skips GPU inference.
 
 **Learning order:** setup → architecture → five stages → conversation → structure/tools → guards → evaluation → caching → optional live experiments → criterion audit.''')
 md('''## 1. Reproducible setup
@@ -47,11 +47,15 @@ if missing:
     subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--quiet', '-r', str(ROOT/'requirements.txt')])
 sys.path.insert(0, str(ROOT / 'src'))
 # Avoid imported module state from an earlier Run all in this same kernel.
-for name in ('riwaq', 'evidence', 'live', 'privacy'):
-    sys.modules.pop(name, None)
+for name in list(sys.modules):
+    if name in ('riwaq', 'evidence', 'live', 'privacy', 'colab_runtime', 'local_experiments', 'review') or name.startswith('test_'):
+        sys.modules.pop(name, None)
 from riwaq import *
 from evidence import *
 from live import *
+from colab_runtime import in_colab, start_local_model
+from local_experiments import *
+from review import build_review, validate_owner_approval
 SEEDS = json.loads((ROOT / 'data/seeds.json').read_text())
 SEMANTIC_PAIRS = json.loads((ROOT / 'data/semantic_calibration.json').read_text())
 CASES = json.loads((ROOT/'data/golden.json').read_text())
@@ -199,66 +203,97 @@ code("""evidence = run_all(ROOT)
 print((ROOT/'EVALUATION_REPORT.md').read_text())
 print((ROOT/'BENCHMARKS.md').read_text())
 """)
-md('''## 12. Optional live commercial/open-weight comparison
-**Disabled by default; explicitly enable only after setting up your endpoints. Live calls may incur charges.** Use Colab Secrets or private environment variables; do not put key literals in this notebook.
+md("""## 12. Real Hugging Face model on your Colab GPU — automatic
+This is the real-model step. The first setup creates a separate environment for vLLM so its CUDA/PyTorch packages do not overwrite the notebook's SDK dependencies. Public Qwen weights are downloaded from Hugging Face; the resolved model commit and GPU are recorded.
 
-For each prefix `RIWAQ_COMMERCIAL` and `RIWAQ_OPEN_WEIGHT`, configure:
+The local server binds to `127.0.0.1` and exposes an OpenAI-compatible interface. The same provider SDK, Pydantic schemas, authorization gates and tool loop are used. vLLM provides schema-constrained generation and the Hermes tool parser. See the [model card](https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct), [GPU support](https://docs.vllm.ai/en/v0.18.2/getting_started/installation/gpu/) and [tool-calling documentation](https://docs.vllm.ai/en/v0.18.2/features/tool_calling/).
 
-- `_URL`: provider's base URL ending in `/v1` (HTTPS, or loopback HTTP for local testing).
-- `_MODEL`: exact deployed model ID. The open-weight endpoint must serve an actual open-weight model.
-- `_KEY`: authentication if required.
-- `_INPUT_USD_M`, `_CACHED_USD_M`, `_OUTPUT_USD_M`: verified current price per million tokens. Omit them to keep cost unknown.
-
-The adapter uses a [documented OpenAI-compatible chat contract](https://docs.vllm.ai/en/latest/serving/online_serving/openai_compatible_server/) with strict JSON-schema output and strict function definitions. Endpoint compatibility must be tested. [Provider cache accounting](https://openai.com/index/api-prompt-caching/) comes from `usage.prompt_tokens_details.cached_tokens`; the code never substitutes simulator estimates for this evidence.
-
-Both backends run the same golden set and print slices alongside cost, latency and extraction results. Failed provider calls are not silently replaced by the simulator.''')
-code("""RUN_LIVE = False
-if RUN_LIVE:
-    live_results = live_comparison(CASES, SEEDS, ROOT)
-    for backend, result in live_results.items():
-        print(backend, json.dumps({k:v for k,v in result.items() if k!='evaluation'}, indent=2))
-        print(json.dumps(result['evaluation']['slices'], indent=2))
-        assert result['evaluation']['slices']['risk=safety']['rate'] == 1
+**Colab:** select a T4 or better GPU before Run all. No external API account or token is needed. Installation/model startup can take several minutes. If it fails, inspect the install/download/server log in the Files panel; do not substitute simulator results. This is one open-weight model, not a commercial backend.""")
+code("""RUN_LOCAL_MODEL = in_colab()
+if RUN_LOCAL_MODEL:
+    if 'RIWAQ_SERVER' in globals():
+        RIWAQ_SERVER.stop()
+    try:
+        RIWAQ_SERVER = start_local_model(ROOT)
+        local_result = run_local_evaluation(ROOT, RIWAQ_SERVER.provenance())
+    except Exception:
+        diagnostic_archive = export_results(ROOT)
+        print('Startup/run diagnostics saved:', diagnostic_archive)
+        if in_colab():
+            from google.colab import files
+            files.download(str(diagnostic_archive))
+        raise
+    print('Safety:', local_result['safety_green'])
+    print('Baseline gate:', local_result['gate_against_committed_baseline'])
 else:
-    print('NOT RUN: commercial and open-weight live evidence requires configured endpoints.')
+    print('NOT RUN: local Hugging Face inference requires Colab GPU; this local execution tests application code only.')
 """)
-md('''## 13. Human labels and judge calibration
-The written one-dimension judge rubric is loaded from `eval/rubrics/groundedness.v1.md`. Safety uses deterministic checks only. A judge does not gate anything while uncalibrated. The next cell prepares 40 candidate answer/reference pairs without pre-filling human judgments.
+md("""## 13. Your review and actual judge calibration
+Open `Riwaq_Human_Review.html` from the generated files. It shows 40 reference/answer pairs with no preselected labels. Choose whether each answer's facts are supported, then download `owner_labels.json`. Also inspect the golden expectations and download `owner_approval.json` if you approve them.
 
-Review each pair independently, fill the boolean `supported`, your name in `reviewer`, the review date in `reviewed_at`, and set `owner_approved=True` only after review. Save as `owner_labels.json` in the temporary workspace. Then enable the calibration cell with a live endpoint configured. The output includes Cohen’s κ and the confusion matrix; κ must be at least 0.6. A synthetic test of the κ formula is not a calibration result.''')
-code("""candidates = judge_candidates(CASES)
-(ROOT/'judge_candidates.json').write_text(json.dumps(candidates, ensure_ascii=False, indent=2))
-print('Unlabelled review pairs:', len(candidates))
-assert len(candidates) == 40
-assert cohen_kappa([True,True,False,False], [True,True,False,False]) == 1
-assert cohen_kappa([True,True,False,False], [True,False,True,False]) == 0
-RUN_JUDGE = False
-if RUN_JUDGE:
-    labels = json.loads((ROOT/'owner_labels.json').read_text())
-    calibration = calibrate_judge(labels, configured_client('commercial'))
-    record_calibration(ROOT,calibration)
-    print(calibration)
-    assert calibration['qualified'], 'Judge is not qualified; do not use for quality gating'
+Upload these two files through Colab's Files panel (to `/content`) and rerun the calibration cell below. No JSON editing is needed. The code verifies that your labels refer to the unchanged candidate set. It runs the **actual local model** as the judge using the written factual-support rubric, reports agreement and Cohen's kappa, and keeps an unqualified judge out of gating.
+
+Run all can finish before human review: missing labels are explicitly reported as pending. Your judgments cannot be generated automatically and called human labels.""")
+code("""review_file = build_review(ROOT)
+print('Review form:', review_file)
+if in_colab():
+    from IPython.display import display, FileLink
+    display(FileLink(str(review_file)))
+label_path = next((p for p in [ROOT/'owner_labels.json', Path('/content/owner_labels.json')] if p.is_file()), None)
+approval_path = next((p for p in [ROOT/'owner_approval.json', Path('/content/owner_approval.json')] if p.is_file()), None)
+if approval_path:
+    approval = validate_owner_approval(ROOT, approval_path)
+    write_json(ROOT/'verified_owner_approval.json', approval)
+    print('Owner approval verified against the frozen golden set.')
 else:
-    print('Judge calibration: PENDING independent owner review and live inference.')
+    print('PENDING: independent golden-set owner review.')
+if label_path and RUN_LOCAL_MODEL:
+    calibration = run_reviewed_judge(ROOT, label_path)
+    print(json.dumps(calibration, indent=2))
+    print('Judge qualified:', calibration['qualified'])
+else:
+    print('PENDING: complete the human review form; real model must be running for calibration.')
 """)
-md('''## 14. Real dollar replay and both hosting comparisons
-Do not substitute laptop simulator throughput for GPU inference throughput. This optional cell measures serial FAQ throughput on the configured open-weight endpoint. It is self-host evidence **only if you actually control that isolated self-hosted endpoint**.
+md("""## 14. Measure local inference, prefix caching and response caching
+The actual model answers the same FAQ workload with and without the response cache. Each row includes replay quality and a full golden-set verdict. Failures remain visible; code never rewrites the expected answers.
 
-Supply the actual hourly hosting cost in `RIWAQ_GPU_USD_HOUR`. The function compares hosting against **both baseline API traffic and response-cached API traffic**, using verified provider usage and prices. Break-even demand is `hourly hosting cost / API cost per request`; measured capacity is `requests per second × 3600 × utilization`. Hosting is feasible only if break-even demand fits that capacity. These are conservative serial measurements, not a maximum-concurrency GPU benchmark.''')
-code("""RUN_COST = False
-if RUN_COST:
-    replay = live_cache_replay(CASES, SEEDS)
-    throughput = measure_self_host(CASES)
-    comparisons = hosting_comparisons(float(os.environ['RIWAQ_GPU_USD_HOUR']), throughput['measured_rps'], replay)
-    record_economics(ROOT,replay,throughput,comparisons)
-    print(json.dumps({'replay':replay,'throughput':throughput,'comparisons':comparisons},indent=2))
+Prefix caching is enabled in the server. Only returned `cached_tokens` is evidence of a hit; missing details stay unknown. Small prompts or engine limitations can prevent meeting the earlier PDF's 65% target.
+
+No paid API bill exists for this local route. If you know a GPU hourly rate, set `RIWAQ_GPU_USD_HOUR`; the notebook reports **modeled compute cost = measured occupied time × supplied hourly rate**. Without it, dollar costs remain unknown. This excludes startup, idle time and hardware amortization. A zero-price free session cannot demonstrate a percentage dollar saving.
+
+Serial throughput is measured after warm-up. It is not maximum GPU capacity. The commercial-versus-open-weight item remains outstanding unless actual commercial evidence or a documented instructor-approved replacement is provided.""")
+code("""if RUN_LOCAL_MODEL:
+    hourly = os.getenv('RIWAQ_GPU_USD_HOUR')
+    local_cache = local_cache_experiment(ROOT, hourly_usd=float(hourly) if hourly else None)
+    throughput = local_throughput(ROOT)
+    print('Local cache:', json.dumps({k:v for k,v in local_cache.items() if k!='steps'}, indent=2))
+    for row in local_cache['steps']:
+        print({k:v for k,v in row.items() if k not in ('usage','eval')})
+    print('Throughput:', json.dumps({k:v for k,v in throughput.items() if k!='usage'}, indent=2))
+    rate_a, rate_b = os.getenv('RIWAQ_UNCACHED_API_USD_PER_REQUEST'), os.getenv('RIWAQ_CACHED_API_USD_PER_REQUEST')
+    if hourly and rate_a and rate_b:
+        economics = economic_scenarios(throughput, float(hourly), float(rate_a), float(rate_b))
+        record_section(ROOT, 'BENCHMARKS.md', 'Conditional hosting break-even',
+            'Measured local throughput with user-supplied price assumptions, not an observed commercial run.\\n```json\\n'+json.dumps(economics,indent=2)+'\\n```')
+        print(economics)
+    else:
+        print('Break-even prices pending: no commercial rates or GPU price have been invented.')
 else:
-    print('NOT MEASURED: actual dollar reduction, cached-token target, self-host break-even.')
+    print('NOT MEASURED: no local GPU inference in this process.')
+""")
+md("""### Optional commercial comparison — only if access is supplied later
+This is not required to run the local Hugging Face route. The rubric explicitly awards points to commercial/open-weight comparison; a simulator or a second open-weight model cannot be labelled commercial inference. Configure the existing commercial alias only if access is supplied; otherwise the report leaves this item pending.""")
+code("""RUN_COMMERCIAL_COMPARISON = False
+if RUN_COMMERCIAL_COMPARISON:
+    comparison = live_comparison(CASES, SEEDS, ROOT)
+    for name, result in comparison.items():
+        print(name, result['evaluation']['slices'], result['meter_summary'])
+else:
+    print('Commercial comparison: not run; local open-weight inference is reported separately.')
 """)
 md('''## 15. Try a conversation
 Call `chat("your question")` below. Public questions work anonymously. Actions require a trusted session; the example session is fictional. The default Run all never blocks waiting for typed input.''')
-code("""chat_app = CampusApp()
+code("""chat_app = CampusApp(configured_client('open_weight')) if RUN_LOCAL_MODEL else CampusApp()
 def chat(message, session=None):
     result = chat_app.respond(message, session)
     print(result['answer'])
@@ -268,19 +303,19 @@ chat('When does enrolment close?')
 """)
 md('''## 16. Seven-section write-up and decisions
 
-**Architecture (15).** I used router-first control so public facts take a single generation, appointments pass through explicit workflow code, and a human handoff ends the route. The model boundary and fault drills are executed. Commercial/open-weight selection is implemented but still needs live evidence.
+**Architecture (15).** I used router-first control so public facts take a single generation, appointments pass through explicit workflow code, and a human handoff ends the route. The model boundary and fault drills are executed. The configured local Hugging Face server uses the same SDK boundary. Its actual run is reported separately; commercial comparison remains pending without access or a documented instructor-approved alternative.
 
 **Structure and tools (15).** A strict appointment object prevents free-form strings from bypassing domain constraints. Extract/validate/retry/repair runs with measured Arabic/English rates. The tool registry checks session permissions and logs risks and iteration. The student identity is never an extracted field.
 
 **Prompts and guards (15).** Versioned prompt files centralize instructions; Saudi PII is masked before model access and checked again outbound. Five stages are individually demonstrated. Both attack blocking and false-positive rates are measured on 32-case corpora. Normalization closes several Unicode bypass shapes, while limitations remain explicit.
 
-**Evaluation (20).** The 84-case harness calls the same application as chat. Safety gets deterministic checks and must be 100%. A degraded Arabic fee prompt makes the slice-based gate reject the change. Expectations await owner review; live judge calibration is pending.
+**Evaluation (20).** The 84-case harness calls the same application as chat. Safety gets deterministic checks and must be 100%. A degraded Arabic fee prompt makes the slice-based gate reject the change. Expectations await owner review; judge calibration runs only after independently reviewed labels are uploaded. Read the generated status section for whether it was completed.
 
-**Cost and latency (15).** I metered first and then compared uncached, exact-cache and lexical-cache replay with evaluation verdicts beside every step. Call reduction is measured, but it is not a dollar-saving claim. Provider cached-token evidence and paid runs remain necessary.
+**Cost and latency (15).** I metered first and then compared uncached, exact-cache and lexical-cache replay with evaluation verdicts beside every step. Call reduction is measured, but it is not a dollar-saving claim. The local-model experiment records observed prefix-cache counters when returned and measured execution time. Dollar estimates require a supplied hourly rate and are labelled as a cost model, not an invoice.
 
 **Model recommendation (10).** I will not choose a production model using simulator scores. The live runner compares the same traffic by slice, latency and cost. Hosting must compete with both uncached and cached API costs at measured capacity. No hosting recommendation is asserted without those inputs.
 
-**Complete application (10).** This self-contained notebook runs an English/Arabic conversation, a real in-memory booking, a refusal, and a scripted fallback without credentials. The fresh local execution is captured. The previous version’s returned results notebook records successful Colab execution; this upgraded version needs a new Run all. Trainee identity and cohort dates are recorded. Runtime-reset confirmation and repository publication remain outstanding.
+**Complete application (10).** This self-contained notebook runs an English/Arabic conversation, a real in-memory booking, a refusal, and a scripted fallback without credentials. The fresh local execution is captured. Previous Colab execution is preserved; the new Hugging Face server/evaluation path needs its own captured run. Trainee identity and cohort dates are recorded. Runtime-reset confirmation and repository publication remain outstanding.
 
 **Reversed trade-off:** free-form friendly FAQ generation was rejected in favor of exact source matching, because an invented fee can pass keyword-only safety checks. This protects facts at the expense of paraphrasing. The regression experiment demonstrates that quality can still fall safely.
 
@@ -299,10 +334,22 @@ md('''## 16. Seven-section write-up and decisions
 - [ ] Two live backends executed; provider prompt caching ≥65% verified.
 - [ ] Human-reviewed judge labels; actual κ≥0.6.
 - [ ] Real dollar savings ≥60% with quality verdicts; measured self-host economics.
-- [ ] Updated SDK/Pydantic notebook rerun fresh in Colab (the previous version passed).
+- [ ] New Hugging Face-enabled notebook executed on Colab GPU with saved real-model outputs.
 - [ ] Repository URL published with genuine incremental history; peer review recorded.
 
 These remaining items are requirements, not optional polish. Do not describe the current offline build as having achieved them.''')
+md("""## 18. Save and return your results
+The final archive contains the generated reports, raw metrics and local-server diagnostics. Download `Riwaq_results.zip` and also download the executed notebook through File → Download → Download .ipynb. Send both back. If you completed the human review, also send its two JSON files; those are intentionally not automatically included in the report archive.
+
+The status table below reports missing evidence rather than claiming the project has earned all points.""")
+code("""print(json.dumps(submission_status(ROOT), indent=2))
+result_archive = export_results(ROOT)
+print('Results archive:', result_archive)
+if in_colab():
+    from google.colab import files
+    files.download(str(result_archive))
+    files.download(str(review_file))
+""")
 notebook={'nbformat':4,'nbformat_minor':5,'metadata':{'kernelspec':{'display_name':'Python 3','language':'python','name':'python3'},'language_info':{'name':'python','version':'3.10'},'colab':{'name':'Riwaq_Capstone.ipynb','provenance':[]}},'cells':cells}
 for i,c in enumerate(cells): c['id']='riwaq-%03d'%i
 (ROOT/'Riwaq_Capstone.ipynb').write_text(json.dumps(notebook,ensure_ascii=False,indent=1)+'\n')

@@ -39,3 +39,11 @@ Prompts are loaded from versioned files with changelogs. Stable system instructi
 Saudi PII detection is conservative and format-based. Mask ID/iqama numbers, local/international phone formats, IBAN and email before model access, exception feedback and logs. Reject detected PII outbound. This is not comprehensive entity recognition: arbitrary names, addresses and novel obfuscations need broader coverage.
 
 The versioned golden set and frozen baseline are data files. Normal execution verifies provenance and compares candidates; it never rewrites the expectations or promotes the baseline. Update either only as a deliberate reviewable change. Judge calibration requires independent human labels and reviewer/date provenance; the known label count or a synthetic formula test is not calibration evidence.
+
+## ADR 008 — No-paid-API Colab inference
+
+The owner relayed the instructor's instruction that a real external API is not needed and Hugging Face may be used. Provide actual public open-weight inference in Colab rather than repeatedly asking for credentials. Use configured Qwen2.5-1.5B-Instruct weights with vLLM 0.18.2, float16, a bounded context and Hermes tool parsing. An isolated environment avoids changing the notebook's PyTorch/SDK dependency graph. The server binds only to loopback and disables request/output logs. The model snapshot commit and GPU details are recorded.
+
+The small model is chosen for a modest Colab GPU footprint, not because it has won a quality comparison. Every measured failure remains visible. The same OpenAI SDK boundary sends strict schemas/tool definitions to the local server; no new raw model call enters business logic. No CPU simulator is silently substituted if the GPU path fails.
+
+Keep the commercial comparison pending: neither public open weights nor a simulated SDK transport is commercial inference. An instructor-approved alternative requires explicit evidence of that alternative; no waiver is inferred. Cost estimates require supplied hourly/commercial rates and are distinguished from measured tokens/timing and from invoices. Human labels are collected in a blank browser form and validated against the fixed candidates before live judge calibration.

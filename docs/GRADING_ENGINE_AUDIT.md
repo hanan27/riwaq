@@ -33,12 +33,18 @@ This maps the user's newly supplied grading-engine breakdown to the actual imple
 | Commercial and open-weight golden runs | 4 | Configuration and shared harness ready. **Both live runs pending.** |
 | Comparison by slice | 3 | Live report writer includes intent/language/risk/difficulty slices plus latency/cost. **Live comparison data pending.** |
 | Measured self-host break-even | 3 | Actual open-weight request timing path and both uncached/cached API comparisons implemented. **Isolated self-host measurements/prices pending.** |
-| Runnable README/notebook | 4 | Updated self-contained notebook, automatic dependency installation, bilingual demo and explanations. **New Colab rerun needed after this code change.** |
+| Runnable README/notebook | 4 | Updated self-contained notebook, automatic dependency installation, bilingual demo and explanations. **Updated Colab run verified: 21 cells passed.** |
 | Single entry point | 3 | Colab Runtime → Run all. No API key required for default SDK simulator. |
 | Generated evaluation report | 3 | Offline report generated from actual application runs; live sections generated when enabled; limitations explicit. |
 
 ## Submission requirements outside the point rows
 
-Hanan Ahmed Alahmadi; SDAIA Academy, LLM Application Engineering (SDA-AIE-213), cohort 13–16 September 2026. These details are complete. Publish the repository with its real local history. Do not claim peer review, owner approval or live measurements before they occur. A fresh Colab run of the older version does not verify the upgraded dependency/SDK/tool-loop version.
+Hanan Ahmed Alahmadi; SDAIA Academy, LLM Application Engineering (SDA-AIE-213), cohort 13–16 September 2026. These details are complete. Publish the repository with its real local history. Do not claim peer review, owner approval or live measurements before they occur. The user has now returned a successful Colab run of the upgraded dependency/SDK/tool-loop version; see `COLAB_UPGRADE_VERIFICATION.md`.
 
 The earlier PDF also names explicit targets: safety 100%; paired guard ≥95%/0%; judge κ≥0.6; provider cached inputs ≥65%; dollar cost reduction ≥60%. The offline safety/guard checks pass. Live judge/cache/dollar targets remain unmeasured, not automatically satisfied by implementation.
+
+## Local Hugging Face continuation
+
+The new Colab section starts actual public model inference automatically on a GPU, calls the same SDK, evaluates the same frozen set, records cache/throughput and generates reports. A browser form collects independent judge labels and golden approval. A result exporter preserves successful and failed evidence.
+
+**Current evidence limit:** GPU model execution is not available on the development Mac. Local integration tests are not model-quality/throughput measurements. The returned previous Colab run is preserved; this new GPU path requires its own run. Commercial comparison, human calibration results, economic inputs and publication remain pending until provided or executed. Follow [the finishing steps](FINISHING_STEPS.md).

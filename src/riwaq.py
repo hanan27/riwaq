@@ -190,7 +190,7 @@ class LLMClient(Protocol):
 # %% ADAPTER SECTION: all network/provider access lives here.
 class HTTPClient:
     """The real provider SDK path, also exercised against an explicit offline transport."""
-    def __init__(self, name, base_url, model, key='', prices=None, transport=None, simulated=False):
+    def __init__(self, name, base_url, model, key='', prices=None, transport=None, simulated=False, request_timeout=15):
         from openai import OpenAI
         import httpx
         from urllib.parse import urlparse
@@ -200,7 +200,7 @@ class HTTPClient:
         self.name, self.model, self.prices, self.simulated = name, model, prices, simulated
         self.cache_identity = (name, base_url, model)
         self.sdk = OpenAI(api_key=key or 'local-no-key', base_url=base_url, max_retries=0,
-                          timeout=15, http_client=httpx.Client(transport=transport, follow_redirects=False))
+                          timeout=request_timeout, http_client=httpx.Client(transport=transport, follow_redirects=False))
     def complete(self, prompt_id, payload, max_tokens, *, messages=None, tools=None, tool_choice='auto'):
         from openai import RateLimitError, APIConnectionError, APITimeoutError, APIStatusError
         if not 1 <= max_tokens <= 1024: raise ValueError('output budget')
@@ -344,7 +344,9 @@ def configured_client(name='offline'):
         if fallback_name not in ('commercial','open_weight') or fallback_name == name: raise ValueError('invalid fallback alias')
         fp = 'RIWAQ_' + fallback_name.upper()
         fallback = HTTPClient(fallback_name, os.environ[fp+'_URL'], os.environ[fp+'_MODEL'], os.getenv(fp+'_KEY',''))
-    return MeteredClient(HTTPClient(name, base, model, os.getenv(prefix + '_KEY', ''), prices), fallback)
+    timeout = float(os.getenv(prefix + '_TIMEOUT_SECONDS', '15'))
+    if not 1 <= timeout <= 120: raise ValueError('Request timeout must be 1–120 seconds')
+    return MeteredClient(HTTPClient(name, base, model, os.getenv(prefix + '_KEY', ''), prices, request_timeout=timeout), fallback)
 
 def extract_request(client, text):
     trace = []

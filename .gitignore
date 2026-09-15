@@ -10,3 +10,14 @@ live_evidence.json
 owner_labels.json
 notebook_run/
 *.log
+local-model-env/
+local_evaluation.json
+local_cache.json
+local_throughput.json
+local_model_provenance.json
+model_snapshot.json
+submission_status.json
+judge_calibration.json
+verified_owner_approval.json
+owner_approval.json
+Riwaq_results.zip

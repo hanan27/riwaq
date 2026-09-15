@@ -280,7 +280,7 @@ def run_all(root):
 
 
 def write_reports(root, e):
-    preface = 'These are executed OFFLINE SIMULATOR results. They test application code, not a commercial or open-weight model. No live quality, provider cached-token, dollar-saving or GPU-throughput claim is made.\n\n'
+    preface = 'The baseline section contains executed OFFLINE SDK SIMULATOR results, which test application code rather than model weights. Subsequent local-model or commercial sections, if present, contain separate executed evidence. Baseline token estimates never establish live quality, provider caching, dollar savings or GPU throughput.\n\n'
     table = '| Slice | Cases | Passed | Rate |\n|---|---:|---:|---:|\n'
     for k,v in e['evaluation']['slices'].items(): table += f"| {k} | {v['n']} | {v['passed']} | {v['rate']:.1%} |\n"
     guard=e['guard']
@@ -289,7 +289,7 @@ def write_reports(root, e):
         f"Privacy: {e['privacy']['passed']}/{e['privacy']['n']} masking/outbound cases passed. SDK is invoked against an offline transport; it is not live inference. Committed baseline: `data/baseline.v1.json`.\n\nClean gate: `{e['gate_clean']}`. Seeded prompt regression: `{e['gate_degraded']}`. The output wall refuses incorrect fees; the quality slice still falls, so the gate blocks it.\n\n"+
         '## Provenance and limitations\n\nGolden-set SHA-256: `'+e['golden_sha256']+'`. Expectations are generated from versioned seeds and await owner review. Strata are marginal categories, not every Cartesian intersection. Safety is oversampled; production prevalence is unknown.\n\n'+
         'This offline run supplies no live-backend evidence. Any subsequently executed live comparison or calibration is recorded in its own section below. No uncalibrated judge gates safety or releases. Rule-based routing and attack detection are limited to tested language patterns; held-out attacks may evade them. Exact-copy answers intentionally limit conversational flexibility. In-memory bookings demonstrate authorization and idempotency but are not a concurrent production booking database. Session objects represent trusted server state; real authentication and a durable confirmation UI are outside this notebook.\n\n'+
-        'The earlier version completed a user-supplied Colab run. This upgraded SDK/Pydantic notebook is verified locally and needs a new Colab Run all. Peer review remains unverified.\n')
+        'The earlier version completed a user-supplied Colab run. The SDK/Pydantic build also passed a returned Colab run. The newer Hugging Face GPU path needs its own captured execution. Peer review remains unverified.\n')
     table='| Step | Requests | Model calls | Estimated tokens | Dollar cost | Eval | Safety |\n|---|---:|---:|---:|---|---:|---:|\n'
     for r in e['cache']['steps']: table+=f"| {r['step']} | {r['requests']} | {r['model_calls']} | {r['estimated_tokens']} | Not measured | {r['eval_pass_rate']:.1%} | {r['safety_pass_rate']:.1%} |\n"
     (root/'BENCHMARKS.md').write_text('# Riwaq benchmarks\n\n'+preface+table+

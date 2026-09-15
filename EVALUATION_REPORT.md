@@ -1,6 +1,6 @@
 # Riwaq evaluation report
 
-These are executed OFFLINE SIMULATOR results. They test application code, not a commercial or open-weight model. No live quality, provider cached-token, dollar-saving or GPU-throughput claim is made.
+The baseline section contains executed OFFLINE SDK SIMULATOR results, which test application code rather than model weights. Subsequent local-model or commercial sections, if present, contain separate executed evidence. Baseline token estimates never establish live quality, provider caching, dollar savings or GPU throughput.
 
 | Slice | Cases | Passed | Rate |
 |---|---:|---:|---:|
@@ -29,4 +29,4 @@ Golden-set SHA-256: `885aceead8b48720de86cdfe877cf0f19ea9df4017847378e41d9c8a887
 
 This offline run supplies no live-backend evidence. Any subsequently executed live comparison or calibration is recorded in its own section below. No uncalibrated judge gates safety or releases. Rule-based routing and attack detection are limited to tested language patterns; held-out attacks may evade them. Exact-copy answers intentionally limit conversational flexibility. In-memory bookings demonstrate authorization and idempotency but are not a concurrent production booking database. Session objects represent trusted server state; real authentication and a durable confirmation UI are outside this notebook.
 
-The earlier version completed a user-supplied Colab run. This upgraded SDK/Pydantic notebook is verified locally and needs a new Colab Run all. Peer review remains unverified.
+The earlier version completed a user-supplied Colab run. The SDK/Pydantic build also passed a returned Colab run. The newer Hugging Face GPU path needs its own captured execution. Peer review remains unverified.

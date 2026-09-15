@@ -1,6 +1,6 @@
 # Riwaq benchmarks
 
-These are executed OFFLINE SIMULATOR results. They test application code, not a commercial or open-weight model. No live quality, provider cached-token, dollar-saving or GPU-throughput claim is made.
+The baseline section contains executed OFFLINE SDK SIMULATOR results, which test application code rather than model weights. Subsequent local-model or commercial sections, if present, contain separate executed evidence. Baseline token estimates never establish live quality, provider caching, dollar savings or GPU throughput.
 
 | Step | Requests | Model calls | Estimated tokens | Dollar cost | Eval | Safety |
 |---|---:|---:|---:|---|---:|---:|
