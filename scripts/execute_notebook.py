@@ -10,6 +10,7 @@ ROOT=Path(__file__).resolve().parents[1]
 path=ROOT/'Riwaq_Capstone.ipynb'
 notebook=json.loads(path.read_text())
 namespace={'__name__':'__main__'}
+os.environ['RIWAQ_ROOT'] = str(ROOT)
 count=0
 with tempfile.TemporaryDirectory(prefix='riwaq-fresh-') as cwd:
     os.chdir(cwd)

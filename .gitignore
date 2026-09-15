@@ -25,3 +25,10 @@ Riwaq_results.zip
 # Local historical copies and operating-system files
 /archive/
 .DS_Store
+
+# Generated evaluation artifacts (historical tracked evidence is retained)
+run-results.json
+QWEN_REQUEST_COSTS.csv
+.pytest_cache/
+*.pem
+*.key

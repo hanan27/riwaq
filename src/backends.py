@@ -80,7 +80,7 @@ def make_client(alias):
     if alias != 'hosted': raise ValueError('unknown model alias')
     config = configuration()['hosted']
     key = os.getenv('HF_TOKEN')
-    if not key: raise ValueError('Set HF_TOKEN privately before Run All')
+    if not key: raise ValueError('Set HF_TOKEN privately for optional hosted inference')
     def adapter(model, prices):
         if prices is not None and (len(prices)!=3 or any((p is None and i!=1) or (p is not None and (not math.isfinite(p) or p<0)) for i,p in enumerate(prices))):
             raise ValueError('Finite nonnegative input/output prices required; cached price may be unknown')

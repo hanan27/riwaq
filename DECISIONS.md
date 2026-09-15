@@ -1,31 +1,21 @@
-# Decisions — submitted Riwaq run
+# Riwaq design decisions
 
-This retrospective record describes the implementation executed in `Riwaq_Capstone.ipynb` on 2026-09-15. It records design rationale; it does not claim a new run.
+## Configuration and execution
 
-## 1. One typed model boundary
+`configs/models.json` is the single source of truth for runtime model IDs, HF routes and pricing assumptions. Notebook setup clones/uses the actual repository and verifies the imported source path. The notebook builder writes orchestration cells, not a second copy of application files. Historical raw results describe their original configuration only.
 
-Use `LLMClient(Protocol)` for model access and `MeteredClient` for retry, bounded backoff, fallback and accounting. The application depends on this contract; provider SDK calls remain in the adapter. This keeps the same application and golden set usable with hosted inference and local weights without introducing a service layer.
+## Existing Hugging Face architecture
 
-## 2. Hosted SDK and direct local weights
+Keep the typed `LLMClient` boundary, metering, retries/fallback and Hugging Face hosted adapter through the existing compatible SDK. Local weights run directly in Transformers. No additional model provider or server is introduced. The default interactive demonstration uses the existing offline SDK simulator without credentials; real model evaluation is optional and explicitly labelled. Missing `HF_TOKEN` skips hosted evaluation before model requests.
 
-The submitted configuration uses the OpenAI Python SDK at `https://router.huggingface.co/v1`, authenticated with `HF_TOKEN`. Its primary alias resolves to `openai/gpt-oss-20b:deepinfra`; its fallback resolves to `openai/gpt-oss-20b:together`. The submitted configuration records schema/tool capability declarations and catalog rates. These declarations are not successful inference evidence: all hosted evaluation requests failed in this run.
+## Authorization and prompts
 
-The local alias resolves to `Qwen/Qwen2.5-1.5B-Instruct`, loaded directly with Transformers. The small model limits download and GPU memory requirements. The measured run used a Tesla T4 and resolved revision `989aa7980e4cf806f80c7fef2b1adb7bc71aa306`. Its low FAQ accuracy is an observed trade-off, not a reason to relax the frozen expectations. There is no local model server or container.
+`CampusApp.respond` calls five named stages: `stage_input`, `stage_route`, `stage_context`, `stage_execute`, and `stage_output`. The notebook demonstrates those production functions. Versioned prompt text loads from `prompts/`; metering retains prompt IDs/hashes.
 
-## 3. Contracts and authorization
+Booking tools enforce authenticated fictional session identity, student role and exact slot consent in Python before mutation. The tool loop also prevents the model from changing the extracted slot. R079 is tested through the production application and SDK mock; golden expectations remain unchanged. This deterministic proof does not claim a new real-model run.
 
-Use strict Pydantic contracts, API JSON-schema requests, and a bounded extraction validate/retry/repair sequence. Tool names and argument schemas are allowlisted. Booking requires a trusted session, student role and confirmed slot; the model cannot grant authorization. The submitted run nevertheless fails the intended slot-consent invariant on R079. That failure remains unresolved and blocks acceptance.
+## Evaluation and economics
 
-## 4. Prompt and cache discipline
+Preserve the frozen golden set and regression baseline. Safety assertions run independently of the judge. Invalid/null predictions yield NOT COMPLETED with no agreement/kappa; valid paired reference labels may yield reference agreement, but human calibration requires independent reviewer, approval and date. Never infer human review from generated fixtures.
 
-Load instructions from versioned files. Place stable instructions first, then masked request data and tool history. This preserves a reusable prompt prefix without assuming a provider cache hit. Use an exact response cache for public FAQs only; keys include text, language, source content/version, prompt version/hash, model identity and guard version. Recheck cached responses through the outbound wall; never cache bookings.
-
-## 5. Evidence and economics
-
-Keep the same versioned golden set and committed regression baseline for both backends. Deterministic assertions carry safety claims; the single-dimension judge measures factual support only. Human calibration is pending, all judge calls failed, and the printed kappa is not valid calibration evidence. Both regression gates reject this run.
-
-Read usage and latency from actual requests. Unknown hosted costs and cache counts remain unknown. Local compute cost is modeled using the explicit $1/hour assumption, not a bill. Throughput is warmed serial FAQ throughput, not saturated GPU capacity. No measured hosted break-even can be claimed without a successful hosted cost measurement.
-
-## Submission provenance
-
-The submitted notebook's embedded configuration and source are authoritative for this run. The root configuration may describe an earlier model choice. Documentation added after execution does not change saved code, outputs, labels, baseline or raw measurements.
+Response caching remains limited to public FAQs with content/model/prompt/guard identity keys and outbound rechecks. Provider prompt caching is separate: missing usage is unknown, and zero cached tokens establish no savings. Costs based on catalog rates or hardware-hour assumptions are estimates, not invoices. Break-even requires successful local throughput and available hosted cost measurements. Historical results remain unchanged as provenance, not current evidence.

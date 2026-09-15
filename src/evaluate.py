@@ -1,6 +1,7 @@
 """One real-run evaluation, with explicit pending states and no simulated measurements."""
 import hashlib
 import json
+import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -49,10 +50,13 @@ def judge_calibration(root, factory):
         except (ModelError, ValueError):
             predictions.append(None); errors += 1
     expected = [r['supported'] for r in labels]
-    kappa = cohen_kappa(expected, predictions)
+    valid = len(expected) >= 2 and all(type(x) is bool for x in expected + predictions)
+    kappa = cohen_kappa(expected, predictions) if valid else None
     reviewed = all(r.get('owner_approved') is True and r.get('reviewer') and r.get('reviewed_at') for r in labels)
-    return {'dimension':'factual support', 'n':len(labels), 'kappa':kappa,
-            'agreement':sum(a==b for a,b in zip(expected,predictions))/len(labels), 'invalid_verdicts':errors,
+    return {'status':'COMPLETED' if valid and reviewed else 'NOT COMPLETED',
+            'reference_agreement_status':'AVAILABLE' if valid else 'UNAVAILABLE',
+            'dimension':'factual support', 'n':len(labels), 'kappa':kappa,
+            'agreement':sum(a==b for a,b in zip(expected,predictions))/len(labels) if valid else None, 'invalid_verdicts':errors,
             'label_provenance':artifact['provenance'], 'human_reviewed':reviewed,
             'qualified':bool(reviewed and not errors and kappa is not None and kappa>=.6),
             'predictions':predictions, 'usage':client.logs}
@@ -73,8 +77,8 @@ def write_report(root, result):
         for row in data['cache']:
             m=row['meter']; cost=m['cost_usd']
             if name=='open_weight': cost=row['seconds']/3600*result['hardware_hourly_usd']
-            lines.append(f"| {name} | {row['step']} | {row['requests']} | {m['attempts']} | {row['mean_latency_ms']:.2f} | {cost} | {row['quality']:.1%} | {m['provider_cached_ratio']} |")
-    lines += ['', 'Qwen USD is modeled occupied time × assumed $1/hour; Hosted API USD estimates use recorded Hugging Face catalog rates before credits, not the previous GPT rates. '
+            lines.append(f"| {name} | {row['step']} | {row['requests']} | {m['attempts']} | {row['mean_latency_ms']:.2f} | {cost if cost is not None else 'Unavailable'} | {row['quality']:.1%} | {m['provider_cached_ratio'] if m['provider_cached_ratio'] is not None else 'Not observed'} |")
+    lines += ['', f"Local USD is modeled occupied time × assumed ${result['hardware_hourly_usd']}/hour; hosted USD estimates use configured historical catalog rates before credits, not invoices. "
               'Unknown API error charges remain unknown. Absent cached-token fields are not evidence of zero cache hits.', '',
               '## Judge, throughput, break-even and gates', '', '```json',
               json.dumps({'judge':{k:v for k,v in result.get('judge',{}).items() if k!='usage'}, **{k:v for k,v in result.items() if k not in ('backends','checks','judge')}},ensure_ascii=False,indent=2), '```', '',
@@ -87,7 +91,7 @@ def write_report(root, result):
     (root/'run-results.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
 
 
-def run(root):
+def run(root, aliases=('hosted','open_weight')):
     root=Path(root); config=configuration()
     result={'run_utc':datetime.now(timezone.utc).isoformat(), 'hardware_hourly_usd':config['hardware_hourly_usd'],
             'backends':{}, 'pending':[], 'gates':{}, 'configuration':config,
@@ -99,7 +103,11 @@ def run(root):
     result['pending'].append('Independent review of data/judge-calibration.v1.json') if not all(r.get('owner_approved') and r.get('reviewer') and r.get('reviewed_at') for r in json.loads((root/'data/judge-calibration.v1.json').read_text())['rows']) else None
     result['checks']={'safety_assertions':len(checks),'privacy':privacy,'bilingual_injection':guard}
     write_report(root,result)
-    for alias in ('hosted','open_weight'):
+    for alias in aliases:
+        if alias == 'hosted' and not os.getenv('HF_TOKEN', '').strip():
+            result['pending'].append('hosted: NOT RUN — HF_TOKEN unavailable')
+            result['judge'] = {'status':'UNAVAILABLE', 'kappa':None, 'qualified':False}
+            continue
         print('Running',alias,flush=True)
         try:
             # Resolve once: repeated cases must not reload weights or create SDK transports.
@@ -124,6 +132,8 @@ def run(root):
                     'all_calls_succeeded':all(x['status']=='ok' for x in before['usage']), 'quality':before['quality']}
             else:
                 result['judge']=judge_calibration(root,factory)
+                if result['judge']['status'] != 'COMPLETED':
+                    result['pending'].append('Judge calibration NOT COMPLETED')
         except Exception as exc:
             # Never serialize SDK exception bodies or secrets.
             result['pending'].append(alias+': '+type(exc).__name__+' (HF_TOKEN required for hosted; compatible PyTorch/Transformers and model access required for Qwen)')
