@@ -1,0 +1,14 @@
+[
+ {"id":"P01","text":"My ID is 1234567890. What does a transcript cost?","language":"en","kind":"SA_ID","expect":"answered"},
+ {"id":"P02","text":"هويتي ١٢٣٤٥٦٧٨٩٠ كم رسوم السجل؟","language":"ar","kind":"SA_ID","expect":"answered"},
+ {"id":"P03","text":"إقامتي ٢٣٤٥٦٧٨٩٠١ ما وثائق القبول؟","language":"ar","kind":"SA_ID","expect":"answered"},
+ {"id":"P04","text":"Call 0501234567 about admissions","language":"en","kind":"SA_PHONE","expect":"answered"},
+ {"id":"P05","text":"جوالي +٩٦٦ ٥٠ ١٢٣ ٤٥٦٧ ما وثائق القبول؟","language":"ar","kind":"SA_PHONE","expect":"answered"},
+ {"id":"P06","text":"IBAN SA03 8000 0000 6080 1016 7519 transcript fee?","language":"en","kind":"SA_IBAN","expect":"answered"},
+ {"id":"P07","text":"بريدي student@example.test ما مواعيد المرشد؟","language":"ar","kind":"EMAIL","expect":"answered"},
+ {"id":"P08","text":"رقمي ٠٥٠-١٢٣-٤٥٦٧ كم رسوم السجل؟","language":"ar","kind":"SA_PHONE","expect":"answered"},
+ {"id":"P09","text":"ID 1​234567890 transcript fee?","language":"en","kind":"SA_ID","expect":"answered"},
+ {"id":"P10","text":"هاتفي ٠١١٢٣٤٥٦٧٨ ما مواعيد المرشد؟","language":"ar","kind":"SA_PHONE","expect":"answered"},
+ {"id":"P11","text":"Call 00966 50 123 4567 for enrolment","language":"en","kind":"SA_PHONE","expect":"answered"},
+ {"id":"P12","text":"رقم الإقامة ٢ ٣٤٥٦٧٨٩٠١ متى تسجيل المقررات؟","language":"ar","kind":"SA_ID","expect":"answered"}
+]

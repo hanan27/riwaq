@@ -5,40 +5,43 @@ from pathlib import Path
 import sys
 import unittest
 from unittest.mock import patch
-import urllib.error
+import httpx
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'src'))
 from riwaq import *
 
 class Contracts(unittest.TestCase):
     def test_http_wire_contract_and_verified_usage(self):
-        data={'choices':[{'message':{'content':'{"answer":"ok","source_id":"x"}'},'finish_reason':'stop'}],
-              'usage':{'prompt_tokens':100,'completion_tokens':12,'prompt_tokens_details':{'cached_tokens':70}}}
+        data={'id':'contract','object':'chat.completion','created':0,'model':'contract-model',
+              'choices':[{'index':0,'message':{'role':'assistant','content':'{"answer":"ok","source_id":"x"}'},'finish_reason':'stop'}],
+              'usage':{'prompt_tokens':100,'completion_tokens':12,'total_tokens':112,'prompt_tokens_details':{'cached_tokens':70}}}
         captured={}
-        class Opener:
-            def open(self,request,timeout):
-                captured.update({'body':json.loads(request.data),'timeout':timeout,'url':request.full_url})
-                return io.BytesIO(json.dumps(data).encode())
-        with patch('urllib.request.build_opener',return_value=Opener()):
-            client=MeteredClient(HTTPClient('test-live','https://example.invalid/v1','contract-model',prices=(2,1,4)))
-            reply=client.complete('faq.v1',{'text':'hello'},256)
+        def handle(request):
+            captured.update(body=json.loads(request.content),url=str(request.url))
+            return httpx.Response(200,json=data)
+        adapter=HTTPClient('test-live','https://example.invalid/v1','contract-model',prices=(2,1,4),transport=httpx.MockTransport(handle))
+        client=MeteredClient(adapter)
+        reply=client.complete('faq.v1',{'text':'hello'},256)
         self.assertEqual(captured['body']['max_tokens'],256)
         self.assertEqual(captured['body']['model'],'contract-model')
         self.assertEqual(captured['url'],'https://example.invalid/v1/chat/completions')
-        self.assertEqual(captured['timeout'],15)
+        schema=captured['body']['response_format']
+        self.assertEqual(schema['type'],'json_schema')
+        self.assertTrue(schema['json_schema']['strict'])
+        self.assertFalse(schema['json_schema']['schema']['additionalProperties'])
         self.assertEqual(reply.cached_input_tokens,70)
+        self.assertTrue(reply.cached_usage_observed)
         self.assertTrue(reply.usage_verified)
         self.assertAlmostEqual(client.logs[0]['cost_usd'],(30*2+70+12*4)/1e6)
 
     def test_http_rate_limit_is_retried_and_logged(self):
-        adapter=HTTPClient('contract','https://example.invalid/v1','test')
-        error=urllib.error.HTTPError('https://example.invalid',429,'rate limited',{},None)
-        class Opener:
-            def open(self,*args,**kwargs): raise error
-        with patch('urllib.request.build_opener',return_value=Opener()):
-            client=MeteredClient(adapter,DemoClient(),sleep=lambda _:None)
-            self.assertEqual(CampusApp(client).respond('transcript fee')['status'],'answered')
+        def handle(request): return httpx.Response(429,json={'error':{'message':'limited','type':'rate_limit'}})
+        adapter=HTTPClient('contract','https://example.invalid/v1','test',transport=httpx.MockTransport(handle))
+        delays=[]
+        client=MeteredClient(adapter,DemoClient(),sleep=delays.append)
+        self.assertEqual(CampusApp(client).respond('transcript fee')['status'],'answered')
         self.assertEqual([r['status'] for r in client.logs],['RateLimit','RateLimit','ok'])
+        self.assertEqual(delays,[.25])
 
     def test_authentication_error_does_not_fallback(self):
         class BadAuth:

@@ -20,19 +20,19 @@ A hostile request such as “reveal the system prompt” is refused before those
 
 1. Go to Google Colab, select **File → Upload notebook**, and choose `Riwaq_Capstone.ipynb`.
 2. Select **Runtime → Run all**.
-3. The first cell unpacks the embedded source and datasets into a fresh temporary folder. No package, API key or external source file is needed.
+3. The first cell unpacks the embedded source and datasets into a fresh temporary folder. No API key or separate source upload is needed. The first cell automatically installs pinned dependencies if missing.
 4. Read each explanation before its code and inspect the printed output beneath the cell.
 5. If a test fails, execution raises an error. Do not delete the assertion; inspect the failing case and fix the application.
 
-The supplied notebook already contains actual output from a fresh local execution of its 19 code cells. That does not replace your final fresh **Colab** run. In Colab, choose **Runtime → Disconnect and delete runtime**, reconnect, and Run all again before submission.
+The supplied notebook already contains actual output from a fresh local execution of its 21 code cells. That does not replace your final fresh **Colab** run. In Colab, choose **Runtime → Disconnect and delete runtime**, reconnect, and Run all again before submission.
 
 ## Step 3 — Understand what the model can and cannot decide
 
-`LLMClient` is the model interface. The rest of the app asks it for a completion without importing a provider SDK. The offline `DemoClient` follows rules to exercise the app predictably. `HTTPClient` sends the same kind of request to a configured real endpoint.
+`LLMClient` is the model interface. The rest of the app asks it for a completion without importing a provider SDK. The default path actually invokes the OpenAI SDK through an explicit offline HTTP transport, whose `DemoClient` follows rules. `HTTPClient` uses the same SDK with configured real endpoints for live runs.
 
 `MeteredClient` wraps the adapter. It records prompt version, backend, request budget, retry attempt, token usage when supplied, and elapsed time. It retries one rate-limit failure and can try a configured fallback. If all backends fail, it returns a controlled unavailable response through the app.
 
-The model can propose a slot. It cannot give itself permission, change the authenticated student, execute arbitrary Python, or create an unregistered tool.
+Strict schemas are sent over the wire. Prompts are loaded from versioned files. The model can propose a slot. It cannot give itself permission, change the authenticated student, execute arbitrary Python, or create an unregistered tool.
 
 **Defence answer:** “The model boundary lets me replace the provider while keeping the same validation, permissions, tools and evaluation.”
 
@@ -50,7 +50,7 @@ The notebook demonstrates each stage in its own code cell. This makes failures t
 
 ## Step 5 — Understand the strict request schema
 
-An appointment request has exactly three fields:
+A Pydantic appointment model with a registered-slot validator has exactly three fields:
 
 ```json
 {"service":"advising","slot":"mon-09","language":"en"}
@@ -113,7 +113,7 @@ Before submission, read every expectation. Generated fields say `owner_approved=
 
 ## Step 10 — Explain the regression gate
 
-A good average can hide a serious Arabic quality drop. Therefore, `regression_gate` compares each slice, not only the overall score.
+A good average can hide a serious Arabic quality drop. Therefore, `regression_gate` loads the committed baseline and compares dataset identity and each slice, not only the overall score.
 
 The test prompt `faq.v2-bad` replaces 25 with 250 in Arabic transcript answers. The output guard refuses those incorrect answers. Safety remains protected, but the FAQ/Arabic quality slices fall because a correct answer was expected. The gate rejects the candidate.
 
@@ -148,7 +148,7 @@ The exact-source FAQ policy is intentionally strict, so a model that paraphrases
 The notebook creates 40 candidate reference/answer pairs. It leaves their human labels blank.
 
 1. Read each reference and answer yourself.
-2. Set `supported` to true or false and mark `owner_approved` only after review.
+2. Set `supported` to true or false, record `reviewer` and `reviewed_at`, and mark `owner_approved` only after review.
 3. Save the reviewed file privately as `owner_labels.json` in the runtime folder.
 4. Enable the live judge cell.
 5. Inspect Cohen's κ and the confusion matrix. The target is κ ≥0.6.
@@ -168,7 +168,7 @@ Compare hosting against **both** uncached API traffic and response-cached API tr
 
 ## Step 15 — Prepare the final submission
 
-Read `docs/CRITERIA_AUDIT.md` line by line. Add your full name and actual cohort dates to the README, review labels, complete live evidence, and rerun Colab fresh. Publish this project directory as its own repository with the existing local commit history. Do not publish secret files or invent peer signatures.
+Read `docs/CRITERIA_AUDIT.md` line by line. Your name (Hanan Ahmed Alahmadi) and cohort dates (13–16 September 2026) are recorded in the README. Review labels, complete live evidence, and rerun Colab fresh after technical changes. Publish this project directory as its own repository with the existing local commit history. Do not publish secret files or invent peer signatures.
 
 The local repository already records real development checkpoints. Its auto-detected Git committer identity is not a substitute for your required full name in the README. Set your preferred Git identity before adding future commits.
 
@@ -183,3 +183,9 @@ Submit the notebook, evaluation report, benchmarks, decisions, technical guide a
 5. What separates response-cache hits from provider prompt-cache tokens?
 6. Why are 84 simulator passes insufficient evidence for choosing a live model?
 7. Which remaining results require your independent judgment or access?
+
+## What the 15 September upgrade changes
+
+The notebook now needs a fresh Colab Run all because it uses new dependencies and actual SDK tool calls. Your old results notebook is preserved.
+
+Before a model sees a message, Saudi ID/iqama numbers, Saudi phones, IBANs and email formats are masked, including Arabic-digit examples. The output wall rejects these formats too. Twelve separate privacy cases test this behavior. The tool loop reads actual `tool_calls`, validates the arguments, runs authorized tools and sends their results back through the SDK. The full detailed status is in `GRADING_ENGINE_AUDIT.md`; live measurements remain pending.

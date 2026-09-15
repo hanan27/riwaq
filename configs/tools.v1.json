@@ -1,0 +1,5 @@
+{
+  "lookup_service": "Read public fictional university service facts by topic. No student data is returned.",
+  "book_advisor": "Reserve the validated advising slot. Server checks authenticated session and explicit consent. Never provide identity.",
+  "handoff": "Transfer the request to human student support and terminate the workflow."
+}

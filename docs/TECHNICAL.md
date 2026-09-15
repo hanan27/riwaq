@@ -25,7 +25,7 @@ flowchart TD
 
 `src/riwaq.py` contains the production path used by both demonstrations and evaluation. `CampusApp.respond(text, session)` is the entry point. It returns a dictionary with a `status` and `answer`; successful FAQs also include `source_id`, bookings include `booking_id` and `slot`, and handoffs include `handoff_id` and `terminal`.
 
-`LLMClient.complete(prompt_id, payload, max_tokens)` returns `Reply`, carrying text, token usage, cached input usage, finish reason and a verification flag. `MeteredClient` wraps each attempt, records the prompt version/backend/latency, retries a 429 once and optionally falls back. HTTP access is isolated in the marked adapter section. The AST assertion checks imports outside that section. `DemoClient` is explicitly a rules simulator and marks usage unverified.
+`LLMClient.complete(prompt_id, payload, max_tokens)` returns `Reply`, carrying text, token usage, cached input usage, finish reason and a verification flag. `MeteredClient` wraps each attempt, records the prompt version/backend/latency, retries a 429 once and optionally falls back. OpenAI SDK and HTTPX access are isolated in the marked adapter section. The default provider uses the real SDK with an explicit offline transport. The AST assertion checks imports outside that section. `DemoClient` is explicitly a rules simulator and marks usage unverified.
 
 `src/evidence.py` generates the golden set and evaluates the **same** `respond` entry point. It does not supply golden answers to the client. Gold cases start from a fresh app/session to isolate state. Cache replay separately exercises a shared app. `src/live.py` uses the same harness and client boundary for optional live runs and economic measurements.
 
@@ -33,7 +33,7 @@ flowchart TD
 
 User text and generated JSON are untrusted. Identity and confirmation must arrive from server-created `Session` objects. Notebook demo code constructs these objects solely to model the trusted boundary; a user-facing web app must never accept a serialized session from a browser as authorization.
 
-The strict request object admits only `service`, `slot`, and `language`, with enumerated values. A tool registry checks exact argument keys and risk classes. Maximum tool iteration is three; the fixed workflow invokes a bounded number of tools. There is no autonomous unbounded agent. Handoff stops the route immediately. Bookings are stored in-memory and keyed by slot; a student replay gets the same booking ID and a different student cannot overwrite it.
+The strict Pydantic request model admits only `service`, `slot`, and `language`, with enumerated values. A tool registry checks exact argument keys and risk classes. Maximum tool iteration is three; actual model tool_calls are executed and their results returned in role=tool messages, with one bounded final acknowledgement. There is no autonomous unbounded agent. Handoff stops the route immediately. Bookings are stored in-memory and keyed by slot; a student replay gets the same booking ID and a different student cannot overwrite it.
 
 Catalog contents are pinned, fictional and public. Tool results must match the catalog before entering context. Generated FAQs must exactly match the allowed language-specific source and source ID. The application does not expose grades or private student records. Canary tests inject an internal marker into responses and assert it never reaches the visible answer.
 
@@ -46,3 +46,7 @@ The optional semantic tier uses character-sequence similarity only after topic a
 ## Known design limits
 
 The router is keyword-based, so ambiguous/multi-intent input may route poorly. Normalization handles common Unicode and Arabic variants, but regex guards are not a universal injection defence. Exact matching deliberately rejects otherwise valid paraphrases. Fixed catalog answers may not address all details in a question. The simulator is insufficient evidence of live model extraction or judgment quality. No persistent database, real SSO, live institution integration or concurrent booking guarantee is claimed.
+
+## Privacy and strict schema upgrade
+
+`privacy.py` masks Saudi ID/iqama, phone, IBAN and email formats before the SDK boundary; logs carry metadata only. Outbound text is checked for the same patterns. `prompts/*.json` and `eval/rubrics/groundedness.v1.md` supply all generation/judge instructions from disk. Pydantic strict models generate the JSON schemas sent through the SDK. Validation feedback contains locations, error kinds and descriptions without raw invalid values. `data/baseline.v1.json` and the golden data are verified, not rewritten, by ordinary runs.

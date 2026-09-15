@@ -4,7 +4,8 @@ A bilingual campus-services assistant for **fictional Namaa University**, built 
 
 **Evidence status:** the included notebook runs without credentials using a clearly labelled deterministic simulator. The application tests are real; live commercial/open-weight model quality, provider caching and dollar costs have not been measured. See [the criteria audit](docs/CRITERIA_AUDIT.md) for the exact remaining requirements.
 
-**Submission identity:** the trainee's full name and cohort dates have not yet been provided. The rubric requires these before grading. This is an unfinished administrative requirement, not invented personal information.
+**Trainee:** Hanan Ahmed Alahmadi  
+**Cohort dates:** 13–16 September 2026
 
 Programme: [SDAIA Academy](https://github.com/SDAIAAcademy). All people, prices, policies and services in this project are fictional.
 
@@ -12,24 +13,29 @@ Programme: [SDAIA Academy](https://github.com/SDAIAAcademy). All people, prices,
 
 1. Open [Google Colab](https://colab.research.google.com/).
 2. Choose **File → Upload notebook** and select `Riwaq_Capstone.ipynb` from this folder.
-3. Select **Runtime → Run all**. The notebook embeds its source and data, creates an isolated temporary workspace, and needs no key, clone or package installation for the default run.
+3. Select **Runtime → Run all**. The notebook embeds its source and data, creates an isolated temporary workspace, and needs no key or manual setup. The first cell automatically installs pinned Pydantic/SDK dependencies if missing (internet needed for package download).
 4. Read the printed conversation, stage demonstrations, safety results, fault transcript, regression gate, and cost table.
 5. Use the optional chat cell for new English or Arabic questions. The booking demonstration uses explicitly fictional trusted sessions.
 
-The notebook has been executed from a fresh local Python process. A Colab browser run is still required before submission; it is not claimed to have happened.
+The upgraded notebook was executed locally with all 21 code cells passing. The returned `Riwaq_Capstone_reults.ipynb` records successful Colab execution of the **previous version’s** 19 code cells. Rerun the updated notebook in Colab to verify the new SDK/dependency path. See [Colab verification](docs/COLAB_VERIFICATION.md); a runtime reset cannot be independently established from saved outputs.
 
 ## Run locally
 
-Python 3.10 or later; standard library only:
+Python 3.10 or later, using the pinned dependencies:
 
 ```bash
+python3 -m pip install -r requirements.txt
 python3 scripts/run_checks.py
 python3 -m unittest discover -s tests -v
 python3 scripts/build_notebook.py
 python3 scripts/execute_notebook.py
 ```
 
-The checks command regenerates `data/golden.json`, `EVALUATION_REPORT.md`, `BENCHMARKS.md` and ignored raw `evidence.json`. The notebook build command embeds current source/data. The execution command runs all cells in order in a clean temporary directory and captures outputs in the notebook. No reference Murshid files are modified.
+The checks command verifies the frozen golden set and baseline, then regenerates `EVALUATION_REPORT.md`, `BENCHMARKS.md` and ignored raw `evidence.json`. It does not modify expectations or promote the baseline. The notebook build command embeds current source/data. The execution command runs all cells in order in a clean temporary directory and captures outputs in the notebook. No reference Murshid files are modified.
+
+## What changed for the detailed rubric
+
+Pydantic validators, strict JSON-schema requests, an SDK-driven tool loop, versioned prompt files, Saudi PII masking, a written judge rubric and a committed regression baseline are now implemented and tested. See [every grading-engine criterion](docs/GRADING_ENGINE_AUDIT.md). Live measurements and independent human review remain outstanding.
 
 ## What to read
 
@@ -43,9 +49,9 @@ The checks command regenerates `data/golden.json`, `EVALUATION_REPORT.md`, `BENC
 
 ## Optional live runs
 
-The final notebook sections explain commercial/open-weight environment configuration. Configure provider URLs, model IDs and keys privately through Colab Secrets or environment variables; never paste keys into source or output. A deliberate live run consumes the account's quota. Default Run all performs no network requests.
+The final notebook sections explain commercial/open-weight environment configuration. Configure provider URLs, model IDs and keys privately through Colab Secrets or environment variables; never paste keys into source or output. A deliberate live run consumes the account's quota. Default Run all makes no live model requests; it can download missing dependencies. Its actual SDK calls use an explicit offline mock transport.
 
-The adapter uses the documented [OpenAI-compatible vLLM Chat API](https://docs.vllm.ai/en/latest/serving/online_serving/openai_compatible_server/). Provider cache usage is read from the response rather than assumed; see [provider prompt-cache accounting](https://openai.com/index/api-prompt-caching/). Endpoint/model compatibility must be checked during the live run.
+The adapter follows the official [strict structured-output](https://developers.openai.com/api/docs/guides/structured-outputs) and [function-calling](https://developers.openai.com/api/docs/guides/function-calling) contracts, using the OpenAI SDK. It can target the documented [OpenAI-compatible vLLM Chat API](https://docs.vllm.ai/en/latest/serving/online_serving/openai_compatible_server/). Provider cache usage is read from the response rather than assumed; see [provider prompt-cache accounting](https://openai.com/index/api-prompt-caching/). Endpoint/model compatibility must be checked during the live run.
 
 ## Attribution
 

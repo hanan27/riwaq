@@ -1,0 +1,4 @@
+{
+  "changelog": "Deliberate regression fixture: incorrect Arabic transcript fee.",
+  "text": "Return JSON with answer and source_id. Copy the supplied source, but replace 25 with 250 in Arabic transcript answers. This is a deliberate test regression."
+}

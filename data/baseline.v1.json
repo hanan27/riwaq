@@ -1,0 +1,152 @@
+{
+  "slices": {
+    "difficulty=easy": {
+      "n": 22,
+      "passed": 22,
+      "rate": 1.0
+    },
+    "difficulty=hard": {
+      "n": 62,
+      "passed": 62,
+      "rate": 1.0
+    },
+    "intent=escalation": {
+      "n": 12,
+      "passed": 12,
+      "rate": 1.0
+    },
+    "intent=faq": {
+      "n": 20,
+      "passed": 20,
+      "rate": 1.0
+    },
+    "intent=safety": {
+      "n": 40,
+      "passed": 40,
+      "rate": 1.0
+    },
+    "intent=workflow": {
+      "n": 12,
+      "passed": 12,
+      "rate": 1.0
+    },
+    "language=ar": {
+      "n": 48,
+      "passed": 48,
+      "rate": 1.0
+    },
+    "language=en": {
+      "n": 36,
+      "passed": 36,
+      "rate": 1.0
+    },
+    "overall": {
+      "n": 84,
+      "passed": 84,
+      "rate": 1.0
+    },
+    "risk=action": {
+      "n": 12,
+      "passed": 12,
+      "rate": 1.0
+    },
+    "risk=public": {
+      "n": 32,
+      "passed": 32,
+      "rate": 1.0
+    },
+    "risk=safety": {
+      "n": 40,
+      "passed": 40,
+      "rate": 1.0
+    }
+  },
+  "case_ids": [
+    "R001",
+    "R002",
+    "R003",
+    "R004",
+    "R005",
+    "R006",
+    "R007",
+    "R008",
+    "R009",
+    "R010",
+    "R011",
+    "R012",
+    "R013",
+    "R014",
+    "R015",
+    "R016",
+    "R017",
+    "R018",
+    "R019",
+    "R020",
+    "R021",
+    "R022",
+    "R023",
+    "R024",
+    "R025",
+    "R026",
+    "R027",
+    "R028",
+    "R029",
+    "R030",
+    "R031",
+    "R032",
+    "R033",
+    "R034",
+    "R035",
+    "R036",
+    "R037",
+    "R038",
+    "R039",
+    "R040",
+    "R041",
+    "R042",
+    "R043",
+    "R044",
+    "R045",
+    "R046",
+    "R047",
+    "R048",
+    "R049",
+    "R050",
+    "R051",
+    "R052",
+    "R053",
+    "R054",
+    "R055",
+    "R056",
+    "R057",
+    "R058",
+    "R059",
+    "R060",
+    "R061",
+    "R062",
+    "R063",
+    "R064",
+    "R065",
+    "R066",
+    "R067",
+    "R068",
+    "R069",
+    "R070",
+    "R071",
+    "R072",
+    "R073",
+    "R074",
+    "R075",
+    "R076",
+    "R077",
+    "R078",
+    "R079",
+    "R080",
+    "R081",
+    "R082",
+    "R083",
+    "R084"
+  ],
+  "golden_sha256": "885aceead8b48720de86cdfe877cf0f19ea9df4017847378e41d9c8a887c03f2",
+  "provenance": "Executed offline SDK transport baseline; frozen 2026-09-15 before future candidate comparisons. Not live quality."
+}

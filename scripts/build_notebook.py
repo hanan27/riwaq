@@ -7,8 +7,11 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 buf=io.BytesIO()
 with zipfile.ZipFile(buf,'w',zipfile.ZIP_DEFLATED) as z:
-    for p in sorted(list((ROOT/'src').glob('*.py'))+list((ROOT/'data').glob('*.json'))):
-        if p.name=='golden.json': continue
+    files = []
+    for directory in ('src','data','prompts','configs','eval/rubrics','tests'):
+        files.extend(p for p in (ROOT/directory).rglob('*') if p.is_file() and '__pycache__' not in p.parts)
+    files.extend([ROOT/'requirements.txt',ROOT/'requirements.lock'])
+    for p in sorted(files):
         z.writestr(str(p.relative_to(ROOT)),p.read_bytes())
 bundle=base64.b64encode(buf.getvalue()).decode()
 cells=[]
@@ -19,36 +22,48 @@ md('''# Riwaq | رواق — bilingual campus services
 
 This is an original application for **fictional Namaa University**. It provides exact public answers, authorized advisor bookings and human handoffs in Arabic and English.
 
-**Read this evidence note first:** default execution uses a deterministic **simulator**, not a real language model. Safety checks, schema validation, state changes, fault handling and regression gates execute real application code. Live-model comparisons, human judge calibration and provider dollar/cache claims require additional evidence and are not fabricated here. Full name and cohort dates still need to be supplied by the trainee.
+**Read this evidence note first:** default execution uses a deterministic **simulator**, not a real language model. Safety checks, schema validation, state changes, fault handling and regression gates execute real application code. Live-model comparisons, human judge calibration and provider dollar/cache claims require additional evidence and are not fabricated here. **Trainee:** Hanan Ahmed Alahmadi. **Cohort dates:** 13–16 September 2026.
 
-**Run:** select **Runtime → Run all**. No API key, installation or external files are needed. All source and test data are embedded. Optional live cells are disabled by default.
+**Run:** select **Runtime → Run all**. No API key or manual setup is needed. The first cell automatically installs pinned dependencies if needed. All source and test data are embedded. Optional live cells are disabled by default.
 
 **Learning order:** setup → architecture → five stages → conversation → structure/tools → guards → evaluation → caching → optional live experiments → criterion audit.''')
 md('''## 1. Reproducible setup
-This cell unpacks the project's own source and data into a **new temporary folder on each run**. It does not download or install anything. The encoded bundle is only a portable copy of the readable `.py` and `.json` files in the repository; it is not a model or hidden dependency. All evaluation calls use this same application implementation.''')
+This cell unpacks the project's own source and data into a **new temporary folder on each run**. It automatically installs the pinned Pydantic, OpenAI SDK and HTTPX dependencies if their versions are not already present. The first run therefore needs internet access for package installation; it makes no live model requests. The encoded bundle is only a portable copy of the readable `.py` and `.json` files in the repository; it is not a model or hidden dependency. All evaluation calls use this same application implementation.''')
 code("""import base64, io, json, os, sys, tempfile, zipfile
 from pathlib import Path
 ROOT = Path(tempfile.mkdtemp(prefix='riwaq-capstone-'))
 BUNDLE = '"""+bundle+"""'
 with zipfile.ZipFile(io.BytesIO(base64.b64decode(BUNDLE))) as archive:
     archive.extractall(ROOT)
+import importlib.metadata, subprocess
+required = dict(line.strip().split('==') for line in (ROOT/'requirements.txt').read_text().splitlines() if line.strip())
+missing = []
+for package, version in required.items():
+    try:
+        if importlib.metadata.version(package) != version: missing.append(package)
+    except importlib.metadata.PackageNotFoundError:
+        missing.append(package)
+if missing:
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--quiet', '-r', str(ROOT/'requirements.txt')])
 sys.path.insert(0, str(ROOT / 'src'))
 # Avoid imported module state from an earlier Run all in this same kernel.
-for name in ('riwaq', 'evidence', 'live'):
+for name in ('riwaq', 'evidence', 'live', 'privacy'):
     sys.modules.pop(name, None)
 from riwaq import *
 from evidence import *
 from live import *
 SEEDS = json.loads((ROOT / 'data/seeds.json').read_text())
 SEMANTIC_PAIRS = json.loads((ROOT / 'data/semantic_calibration.json').read_text())
-CASES = build_golden(SEEDS)
-print('Ready: isolated workspace; standard library only; OFFLINE SIMULATOR')
+CASES = json.loads((ROOT/'data/golden.json').read_text())
+assert CASES == build_golden(SEEDS)
+BASELINE = ROOT/'data/baseline.v1.json'
+print('Ready: isolated workspace; pinned dependencies ready; OFFLINE SDK SIMULATOR')
 print('Golden cases:', len(CASES))
 """)
 md('''## 2. Architecture and versioned prompts
 The router chooses **FAQ**, **workflow**, or **human handoff**. Every model request goes through `MeteredClient` and the `LLMClient` interface. Provider network imports live only in the clearly marked adapter section. The assertion below checks that boundary on the actual source.
 
-Every model instruction lives in the `PROMPTS` registry with a version and changelog. `faq.v2-bad` deliberately changes an Arabic fee; it is used only to prove the regression gate can fail. The served prompt version is recorded for every model attempt.
+Every model instruction is loaded from a versioned file under `prompts/`, with a changelog. The registry holds loaded artifacts; it contains no inline prompt definitions. The SDK is actually called in default mode using an explicit offline HTTP transport, which demonstrates integration but does not count as live inference. `faq.v2-bad` deliberately changes an Arabic fee; it is used only to prove the regression gate can fail. The served prompt version and content hash are recorded for every model attempt. Static instructions form the stable prefix; masked request data and tool messages follow in the volatile tail. Cached usage remains unknown if the provider does not supply that field.
 
 To inspect the full implementation in Colab, open the Files panel and browse the temporary `src` directory printed below, or run `print((ROOT/'src/riwaq.py').read_text())`.''')
 code("""assert architecture_check((ROOT / 'src/riwaq.py').read_text())
@@ -105,10 +120,11 @@ for message, session in conversation:
 print('Booking state:', app.tools.bookings)
 print('Tool audit:')
 for entry in app.tools.logs: print(entry)
+print('Tool result round trips:', json.dumps(getattr(app,'tool_transcripts',[]),ensure_ascii=False,indent=2))
 assert app.tools.bookings == {'mon-09':'demo-student'}
 """)
 md('''## 5. Validate → retry → repair and resilience
-A strict request admits exactly `service`, `slot`, and `language`. Identity is not an allowed model output. Invalid JSON or invalid enums trigger at most two retries, with the last using a versioned repair prompt. An absent slot asks for clarification.
+A Pydantic model with an explicit slot validator and forbidden extra fields admits exactly `service`, `slot`, and `language`. Identity is not an allowed model output. Model-emitted `tool_calls` are decoded, validated and executed in at most three rounds, with results returned as `role=tool` messages. One final bounded acknowledgement call follows a booking; handoff is terminal. Invalid JSON or invalid enums trigger at most two retries, with the last using a versioned repair prompt. An absent slot asks for clarification. Structured Pydantic errors (field location, type and message, without raw input) are fed into the retry and repair prompts.
 
 The following fault drill scripts an actual raised rate-limit error, an outage that invokes fallback, and total failure that returns a graceful unavailable answer. These are application reliability tests with simulated provider faults, not claims of observed provider outages.''')
 code("""fault_evidence = fault_drills()
@@ -131,6 +147,21 @@ for row in guards['attacks']:
     assert row['blocked'], row['text']
 print('PASS: paired guard thresholds')
 """)
+md("""## Saudi PII protection and SDK contract tests
+Before reaching the model, Saudi ID/iqama numbers, mobile/landline formats, IBANs and email addresses are masked. Arabic digits and common separators are supported. The output wall refuses PII and internal prompt leakage. This detector covers explicit formats, not every possible personal fact such as a name or home address.
+
+The following cells run 12 synthetic privacy cases and the SDK/schema/tool-loop tests. The SDK transport is simulated: no provider cached-token or price claim is inferred from the fixture.""")
+code("""privacy = privacy_report(ROOT)
+print(json.dumps(privacy, ensure_ascii=False, indent=2))
+assert privacy['passed'] == privacy['n']
+print('PASS: PII removed before model boundary; outbound PII refused')
+""")
+code("""import unittest
+sys.path.insert(0, str(ROOT/'tests'))
+suite = unittest.defaultTestLoader.discover(str(ROOT/'tests'))
+test_result = unittest.TextTestRunner(verbosity=2).run(suite)
+assert test_result.wasSuccessful()
+""")
 md('''## 8. Golden set and real-pipeline harness
 84 cases cover FAQ, action, escalation and safety. Arabic is the majority (48 cases), safety is oversampled (40 cases), and every **marginal** category for intent/language/difficulty/risk contains at least eight cases. This does not assert every Cartesian intersection has eight.
 
@@ -142,14 +173,14 @@ assert clean['slices']['overall']['rate'] == 1.0
 print('PASS: all 84 offline cases; safety 40/40')
 """)
 md('''## 9. Prove the regression gate can reject a change
-The gate checks each slice against the baseline. The seeded prompt changes the Arabic transcript fee from 25 to 250. The outbound wall protects the student by refusing that answer; the quality slice still drops because a correct answer was expected. A safe refusal does not disguise a quality regression.''')
+The gate loads the committed `data/baseline.v1.json` and checks dataset identity, case membership and each slice. The ordinary test run never overwrites the baseline or golden set. The seeded prompt changes the Arabic transcript fee from 25 to 250. The outbound wall protects the student by refusing that answer; the quality slice still drops because a correct answer was expected. A safe refusal does not disguise a quality regression.''')
 code("""degraded = run_golden(CASES, prompt='faq.v2-bad')
-print('Clean gate:', regression_gate(clean, clean))
-print('Degraded gate:', regression_gate(clean, degraded))
+print('Clean gate:', regression_gate(BASELINE, clean))
+print('Degraded gate:', regression_gate(BASELINE, degraded))
 for key in clean['slices']:
     print(key, 'baseline=', clean['slices'][key]['rate'], 'candidate=', degraded['slices'][key]['rate'])
-assert regression_gate(clean, clean)['allowed']
-assert not regression_gate(clean, degraded)['allowed']
+assert regression_gate(BASELINE, clean)['allowed']
+assert not regression_gate(BASELINE, degraded)['allowed']
 """)
 md('''## 10. Cost, latency and cache evidence
 Every model attempt is metered, including failures and repair calls. Router and guard code use no models. Offline token counts are explicitly **estimates**, and offline dollar cost remains unknown.
@@ -178,7 +209,7 @@ For each prefix `RIWAQ_COMMERCIAL` and `RIWAQ_OPEN_WEIGHT`, configure:
 - `_KEY`: authentication if required.
 - `_INPUT_USD_M`, `_CACHED_USD_M`, `_OUTPUT_USD_M`: verified current price per million tokens. Omit them to keep cost unknown.
 
-The adapter uses a [documented OpenAI-compatible chat contract](https://docs.vllm.ai/en/latest/serving/online_serving/openai_compatible_server/) with JSON-object output. Endpoint compatibility must be tested. [Provider cache accounting](https://openai.com/index/api-prompt-caching/) comes from `usage.prompt_tokens_details.cached_tokens`; the code never substitutes simulator estimates for this evidence.
+The adapter uses a [documented OpenAI-compatible chat contract](https://docs.vllm.ai/en/latest/serving/online_serving/openai_compatible_server/) with strict JSON-schema output and strict function definitions. Endpoint compatibility must be tested. [Provider cache accounting](https://openai.com/index/api-prompt-caching/) comes from `usage.prompt_tokens_details.cached_tokens`; the code never substitutes simulator estimates for this evidence.
 
 Both backends run the same golden set and print slices alongside cost, latency and extraction results. Failed provider calls are not silently replaced by the simulator.''')
 code("""RUN_LIVE = False
@@ -192,9 +223,9 @@ else:
     print('NOT RUN: commercial and open-weight live evidence requires configured endpoints.')
 """)
 md('''## 13. Human labels and judge calibration
-Safety uses deterministic checks only. A judge does not gate anything while uncalibrated. The next cell prepares 40 candidate answer/reference pairs without pre-filling human judgments.
+The written one-dimension judge rubric is loaded from `eval/rubrics/groundedness.v1.md`. Safety uses deterministic checks only. A judge does not gate anything while uncalibrated. The next cell prepares 40 candidate answer/reference pairs without pre-filling human judgments.
 
-Review each pair independently, fill the boolean `supported`, and set `owner_approved=True` only after review. Save as `owner_labels.json` in the temporary workspace. Then enable the calibration cell with a live endpoint configured. The output includes Cohen’s κ and the confusion matrix; κ must be at least 0.6. A synthetic test of the κ formula is not a calibration result.''')
+Review each pair independently, fill the boolean `supported`, your name in `reviewer`, the review date in `reviewed_at`, and set `owner_approved=True` only after review. Save as `owner_labels.json` in the temporary workspace. Then enable the calibration cell with a live endpoint configured. The output includes Cohen’s κ and the confusion matrix; κ must be at least 0.6. A synthetic test of the κ formula is not a calibration result.''')
 code("""candidates = judge_candidates(CASES)
 (ROOT/'judge_candidates.json').write_text(json.dumps(candidates, ensure_ascii=False, indent=2))
 print('Unlabelled review pairs:', len(candidates))
@@ -205,6 +236,7 @@ RUN_JUDGE = False
 if RUN_JUDGE:
     labels = json.loads((ROOT/'owner_labels.json').read_text())
     calibration = calibrate_judge(labels, configured_client('commercial'))
+    record_calibration(ROOT,calibration)
     print(calibration)
     assert calibration['qualified'], 'Judge is not qualified; do not use for quality gating'
 else:
@@ -219,6 +251,7 @@ if RUN_COST:
     replay = live_cache_replay(CASES, SEEDS)
     throughput = measure_self_host(CASES)
     comparisons = hosting_comparisons(float(os.environ['RIWAQ_GPU_USD_HOUR']), throughput['measured_rps'], replay)
+    record_economics(ROOT,replay,throughput,comparisons)
     print(json.dumps({'replay':replay,'throughput':throughput,'comparisons':comparisons},indent=2))
 else:
     print('NOT MEASURED: actual dollar reduction, cached-token target, self-host break-even.')
@@ -239,7 +272,7 @@ md('''## 16. Seven-section write-up and decisions
 
 **Structure and tools (15).** A strict appointment object prevents free-form strings from bypassing domain constraints. Extract/validate/retry/repair runs with measured Arabic/English rates. The tool registry checks session permissions and logs risks and iteration. The student identity is never an extracted field.
 
-**Prompts and guards (15).** A versioned registry centralizes instructions. Five stages are individually demonstrated. Both attack blocking and false-positive rates are measured on 32-case corpora. Normalization closes several Unicode bypass shapes, while limitations remain explicit.
+**Prompts and guards (15).** Versioned prompt files centralize instructions; Saudi PII is masked before model access and checked again outbound. Five stages are individually demonstrated. Both attack blocking and false-positive rates are measured on 32-case corpora. Normalization closes several Unicode bypass shapes, while limitations remain explicit.
 
 **Evaluation (20).** The 84-case harness calls the same application as chat. Safety gets deterministic checks and must be 100%. A degraded Arabic fee prompt makes the slice-based gate reject the change. Expectations await owner review; live judge calibration is pending.
 
@@ -247,7 +280,7 @@ md('''## 16. Seven-section write-up and decisions
 
 **Model recommendation (10).** I will not choose a production model using simulator scores. The live runner compares the same traffic by slice, latency and cost. Hosting must compete with both uncached and cached API costs at measured capacity. No hosting recommendation is asserted without those inputs.
 
-**Complete application (10).** This self-contained notebook runs an English/Arabic conversation, a real in-memory booking, a refusal, and a scripted fallback without credentials. The fresh local execution is captured. A fresh Colab browser run, identity metadata and repository publication remain to be completed.
+**Complete application (10).** This self-contained notebook runs an English/Arabic conversation, a real in-memory booking, a refusal, and a scripted fallback without credentials. The fresh local execution is captured. The previous version’s returned results notebook records successful Colab execution; this upgraded version needs a new Run all. Trainee identity and cohort dates are recorded. Runtime-reset confirmation and repository publication remain outstanding.
 
 **Reversed trade-off:** free-form friendly FAQ generation was rejected in favor of exact source matching, because an invented fee can pass keyword-only safety checks. This protects facts at the expense of paraphrasing. The regression experiment demonstrates that quality can still fall safely.
 
@@ -261,12 +294,12 @@ md('''## 16. Seven-section write-up and decisions
 - [x] 84-case real-pipeline harness; safety green; seeded regression rejected.
 - [x] Generated report, benchmarks and decisions with known limitations.
 - [x] Model-call replay savings and measured lexical-cache threshold.
-- [ ] Trainee full name and cohort dates supplied in README.
+- [x] Trainee full name and cohort dates supplied in README.
 - [ ] Golden expectations independently owner-approved.
 - [ ] Two live backends executed; provider prompt caching ≥65% verified.
 - [ ] Human-reviewed judge labels; actual κ≥0.6.
 - [ ] Real dollar savings ≥60% with quality verdicts; measured self-host economics.
-- [ ] Fresh Google Colab browser Run all verified.
+- [ ] Updated SDK/Pydantic notebook rerun fresh in Colab (the previous version passed).
 - [ ] Repository URL published with genuine incremental history; peer review recorded.
 
 These remaining items are requirements, not optional polish. Do not describe the current offline build as having achieved them.''')

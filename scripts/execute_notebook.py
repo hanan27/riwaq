@@ -1,4 +1,4 @@
-"""Execute the stdlib-only notebook in a fresh process, capturing real stdout and failures."""
+"""Execute the notebook with its pinned dependencies in a fresh process, capturing real stdout and failures."""
 import contextlib
 import io
 import json

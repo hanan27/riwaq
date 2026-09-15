@@ -1,0 +1,12 @@
+{
+  "offline": {
+    "url": "https://offline.invalid/v1",
+    "model": "riwaq-rule-simulator"
+  },
+  "commercial": {
+    "configuration": "RIWAQ_COMMERCIAL_* environment variables"
+  },
+  "open_weight": {
+    "configuration": "RIWAQ_OPEN_WEIGHT_* environment variables"
+  }
+}

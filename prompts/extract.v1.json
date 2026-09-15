@@ -1,0 +1,4 @@
+{
+  "changelog": "Strict campus appointment request without model-supplied identity.",
+  "text": "Extract a campus appointment. Return only JSON with exactly service, slot, language. service must be advising; slot must be mon-09 or tue-11, or null if unspecified. language must be ar or en. Recognize Monday 9 / الاثنين 9 as mon-09 and Tuesday 11 / الثلاثاء 11 as tue-11. Do not infer consent or identity."
+}

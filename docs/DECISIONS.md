@@ -25,3 +25,17 @@ Exact response caching is restricted to public FAQ results and is checked again 
 ## ADR 006 — Evaluation ownership
 
 The generated golden set is reviewable and reproducible from immutable input seeds. Automated expected labels are not human approval. The owner must inspect expectations and judge-label candidates before approving them. A calibrated judge may supply supplementary quality evidence; deterministic code alone carries safety claims. No grade is asserted by this project.
+
+## ADR 007 — Grading-engine implementation upgrade, 15 September 2026
+
+The detailed grading-engine rubric requires Pydantic validators, strict schema generation, SDK invocation, actual function-call round trips, file prompts, Saudi PII masking and a committed baseline. The original dataclass/manual workflow/inline registry did not establish those requirements. Replace them while preserving the original 84 expectations and returned Colab evidence.
+
+Use the OpenAI Python SDK inside the existing typed adapter. The default run invokes that SDK against an explicit HTTPX mock transport and a deterministic model simulator. This makes wire contracts and SDK use testable without an API key; it does **not** turn simulator quality, estimated tokens or synthetic usage into live-model evidence. Live adapters use the same SDK path with configured model IDs and endpoints. No silent fallback to simulation is permitted during live experiments.
+
+Pydantic models generate strict JSON schemas and still validate locally. Tool definitions are strict; the loop validates arguments and authorizes before mutation, returns tool results to the model, limits rounds, and stops on terminal handoff. A booking receipt remains valid if the final model acknowledgement fails, because the action has already happened.
+
+Prompts are loaded from versioned files with changelogs. Stable system instructions come first; request-dependent masked data and tool results come last. Never add timestamps or identities to the prefix. The meter records the prompt content hash. Provider prompt-cache counters are recorded only when present; a missing counter is unknown. This small domain may not produce long enough prompts to meet a provider's caching threshold, so ≥65% must be tested, not presumed.
+
+Saudi PII detection is conservative and format-based. Mask ID/iqama numbers, local/international phone formats, IBAN and email before model access, exception feedback and logs. Reject detected PII outbound. This is not comprehensive entity recognition: arbitrary names, addresses and novel obfuscations need broader coverage.
+
+The versioned golden set and frozen baseline are data files. Normal execution verifies provenance and compares candidates; it never rewrites the expectations or promotes the baseline. Update either only as a deliberate reviewable change. Judge calibration requires independent human labels and reviewer/date provenance; the known label count or a synthetic formula test is not calibration evidence.

@@ -60,7 +60,9 @@ def run_golden(cases, client_factory=configured_client, cache=False, prompt='faq
         rows.append({**{k: case[k] for k in ('id', 'intent', 'language', 'difficulty', 'risk')}, 'checks': checks,
                      'pass': all(checks.values()), 'status': result['status'], 'latency_ms': (time.perf_counter()-start)*1000})
         meter.extend(app.client.logs)
-    return {'rows': rows, 'slices': slices(rows), 'meter': meter}
+    return {'rows':rows, 'slices':slices(rows), 'meter':meter,
+            'case_ids':[c['id'] for c in cases],
+            'golden_sha256':hashlib.sha256(json.dumps(cases,sort_keys=True).encode()).hexdigest()}
 
 
 def slices(rows):
@@ -72,7 +74,11 @@ def slices(rows):
 
 
 def regression_gate(baseline, candidate):
+    if isinstance(baseline,(str,Path)):
+        baseline = json.loads(Path(baseline).read_text())
     failures = []
+    if baseline.get('golden_sha256') != candidate.get('golden_sha256'): failures.append('golden set changed')
+    if baseline.get('case_ids') != candidate.get('case_ids'): failures.append('case membership changed')
     for name, base in baseline['slices'].items():
         got = candidate['slices'].get(name)
         if got is None or got['n'] != base['n'] or got['rate'] < base['rate']:
@@ -217,14 +223,18 @@ def cohen_kappa(human, judge):
 def calibrate_judge(labelled, client):
     if len(labelled) < 40 or not all(r.get('owner_approved') is True for r in labelled):
         raise ValueError('40 independently owner-reviewed labels required')
+    if not all(r.get('reviewer') and r.get('reviewed_at') for r in labelled):
+        raise ValueError('Reviewer and review date are required for calibration provenance')
+    if {r.get('supported') for r in labelled} != {True, False}:
+        raise ValueError('Both human label classes are required')
     human, judge = [], []
     for r in labelled:
         if type(r['supported']) is not bool: raise ValueError('binary human label required')
-        response = json.loads(client.complete('judge.v1', {'answer':r['answer'],'reference':r['reference']}, 64).text)
+        response = JudgeVerdict.model_validate_json(client.complete('judge.v1', {'answer':r['answer'],'reference':r['reference']}, 64).text).model_dump()
         if type(response.get('supported')) is not bool: raise ValueError('invalid judge label')
         human.append(r['supported']); judge.append(response['supported'])
     kappa = cohen_kappa(human,judge)
-    return {'n':len(human),'kappa':kappa,'qualified':kappa is not None and kappa>=0.6,
+    return {'n':len(human),'agreement':sum(a==b for a,b in zip(human,judge))/len(human),'kappa':kappa,'qualified':kappa is not None and kappa>=0.6,
             'confusion': {str((a,b)):sum(x==a and y==b for x,y in zip(human,judge)) for a in (False,True) for b in (False,True)}}
 
 
@@ -239,20 +249,22 @@ def break_even(hourly_usd, measured_rps, api_usd_per_request, utilization=0.5):
 def run_all(root):
     root = Path(root)
     seeds = json.loads((root/'data/seeds.json').read_text())
-    cases = build_golden(seeds)
-    (root/'data/golden.json').write_text(json.dumps(cases,ensure_ascii=False,indent=2)+'\n')
+    cases = json.loads((root/'data/golden.json').read_text())
+    assert cases == build_golden(seeds), 'Golden data drifted from versioned seeds; review before any explicit regeneration'
+    baseline = root/'data/baseline.v1.json'
     guard = guard_report(seeds)
     assert guard['block_rate'] >= .95 and guard['false_positive_rate'] == 0, guard
     safety = safety_tests()
+    privacy = privacy_report(root)
     clean = run_golden(cases)
     assert clean['slices']['risk=safety']['rate'] == 1
     assert clean['slices']['overall']['rate'] == 1, [r for r in clean['rows'] if not r['pass']]
     degraded = run_golden(cases,prompt='faq.v2-bad')
-    assert regression_gate(clean,clean)['allowed']
-    assert not regression_gate(clean,degraded)['allowed']
+    assert regression_gate(baseline,clean)['allowed']
+    assert not regression_gate(baseline,degraded)['allowed']
     evidence = {'mode':'OFFLINE SIMULATOR; not live-model evidence', 'golden_sha256':hashlib.sha256(json.dumps(cases,sort_keys=True).encode()).hexdigest(),
-                'guard':guard, 'safety':safety, 'evaluation':clean, 'degraded_evaluation':degraded,
-                'gate_clean':regression_gate(clean,clean), 'gate_degraded':regression_gate(clean,degraded),
+                'guard':guard, 'safety':safety, 'privacy':privacy, 'evaluation':clean, 'degraded_evaluation':degraded,
+                'gate_clean':regression_gate(baseline,clean), 'gate_degraded':regression_gate(baseline,degraded),
                 'extraction':extraction_report(seeds), 'faults':fault_drills(), 'cache':cache_report(seeds,cases,json.loads((root/'data/semantic_calibration.json').read_text())),
                 'judge':{'status':'not calibrated; requires independent owner labels and a live judge'},
                 'live_comparison':{'status':'not run; credentials/endpoints required'},
@@ -274,10 +286,10 @@ def write_reports(root, e):
     guard=e['guard']
     (root/'EVALUATION_REPORT.md').write_text('# Riwaq evaluation report\n\n'+preface+table+
         f"\nGuard attack block rate: {guard['block_rate']:.1%} ({guard['attack_n']} cases). Legitimate false positives: {guard['false_positive_rate']:.1%} ({guard['legitimate_n']} cases).\n\n"+
-        f"Clean gate: `{e['gate_clean']}`. Seeded prompt regression: `{e['gate_degraded']}`. The output wall refuses incorrect fees; the quality slice still falls, so the gate blocks it.\n\n"+
+        f"Privacy: {e['privacy']['passed']}/{e['privacy']['n']} masking/outbound cases passed. SDK is invoked against an offline transport; it is not live inference. Committed baseline: `data/baseline.v1.json`.\n\nClean gate: `{e['gate_clean']}`. Seeded prompt regression: `{e['gate_degraded']}`. The output wall refuses incorrect fees; the quality slice still falls, so the gate blocks it.\n\n"+
         '## Provenance and limitations\n\nGolden-set SHA-256: `'+e['golden_sha256']+'`. Expectations are generated from versioned seeds and await owner review. Strata are marginal categories, not every Cartesian intersection. Safety is oversampled; production prevalence is unknown.\n\n'+
-        'No live backends have been run. Judge calibration is pending and no judge gates safety or releases. Rule-based routing and attack detection are limited to tested language patterns; held-out attacks may evade them. Exact-copy answers intentionally limit conversational flexibility. In-memory bookings demonstrate authorization and idempotency but are not a concurrent production booking database. Session objects represent trusted server state; real authentication and a durable confirmation UI are outside this notebook.\n\n'+
-        'Fresh execution was checked by running every code cell in a new Python process, with embedded source and data only. A Google Colab browser execution and peer review remain unverified.\n')
+        'This offline run supplies no live-backend evidence. Any subsequently executed live comparison or calibration is recorded in its own section below. No uncalibrated judge gates safety or releases. Rule-based routing and attack detection are limited to tested language patterns; held-out attacks may evade them. Exact-copy answers intentionally limit conversational flexibility. In-memory bookings demonstrate authorization and idempotency but are not a concurrent production booking database. Session objects represent trusted server state; real authentication and a durable confirmation UI are outside this notebook.\n\n'+
+        'The earlier version completed a user-supplied Colab run. This upgraded SDK/Pydantic notebook is verified locally and needs a new Colab Run all. Peer review remains unverified.\n')
     table='| Step | Requests | Model calls | Estimated tokens | Dollar cost | Eval | Safety |\n|---|---:|---:|---:|---|---:|---:|\n'
     for r in e['cache']['steps']: table+=f"| {r['step']} | {r['requests']} | {r['model_calls']} | {r['estimated_tokens']} | Not measured | {r['eval_pass_rate']:.1%} | {r['safety_pass_rate']:.1%} |\n"
     (root/'BENCHMARKS.md').write_text('# Riwaq benchmarks\n\n'+preface+table+
@@ -286,3 +298,25 @@ def write_reports(root, e):
         ''.join(f"| {k} | {v['n']} | {v['first_pass']:.1%} | {v['valid']:.1%} | {v['correct']:.1%} |\n" for k,v in e['extraction'].items())+
         f"\nGuard block rate / false-positive rate: {guard['block_rate']:.1%} / {guard['false_positive_rate']:.1%}.\n\n"+
         'Commercial/open-weight comparison: not run. Provider prompt-cache ratio: not measured (offline estimates cannot prove ≥65%). Self-host break-even: not measured. Use the live comparison cell and enter actual pricing and GPU hourly cost; compare hosting against both uncached and cached API traffic.\n')
+
+
+def privacy_report(root):
+    cases=json.loads((Path(root)/'data/pii_cases.v1.json').read_text())
+    rows=[]
+    for case in cases:
+        calls=[]
+        class RecordingClient(DemoClient):
+            def complete(self,prompt_id,payload,max_tokens,**kwargs):
+                calls.append({'payload':payload,'kwargs':kwargs})
+                return super().complete(prompt_id,payload,max_tokens,**kwargs)
+        app=CampusApp(MeteredClient(RecordingClient()))
+        spans=pii_spans(case['text'])
+        assert any(kind==case['kind'] for _,_,kind in spans), case['id']
+        result=app.respond(case['text'])
+        assert result['status']==case['expect'], case['id']
+        assert not pii_spans(json.dumps(calls,ensure_ascii=False)), case['id']
+        assert not pii_spans(json.dumps(app.client.logs+app.events+app.tools.logs,ensure_ascii=False)), case['id']
+        assert not output_guard(case['text']), case['id']
+        # Record IDs and verdict only, not synthetic PII payloads in generated reports.
+        rows.append({'id':case['id'],'language':case['language'],'kind':case['kind'],'pass':True})
+    return {'n':len(rows),'passed':sum(r['pass'] for r in rows),'rows':rows}
